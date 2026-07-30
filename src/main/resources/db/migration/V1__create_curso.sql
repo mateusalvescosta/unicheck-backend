@@ -1,0 +1,4 @@
+CREATE TABLE tb_curso (
+    id BIGSERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL
+);
