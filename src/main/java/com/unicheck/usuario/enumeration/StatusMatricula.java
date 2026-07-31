@@ -1,4 +1,4 @@
-package com.unicheck.usuario.domain;
+package com.unicheck.usuario.enumeration;
 
 public enum StatusMatricula {
     ATIVA,
