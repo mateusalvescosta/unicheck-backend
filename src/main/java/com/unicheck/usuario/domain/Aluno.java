@@ -2,14 +2,8 @@ package com.unicheck.usuario.domain;
 
 import com.unicheck.curso.domain.Curso;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.unicheck.usuario.enumeration.StatusMatricula;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,10 +21,12 @@ public class Aluno {
     @GeneratedValue(strategy  = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "usuario_id", nullable = false, unique = true)
+    @OneToOne
+    @JoinColumn(name = "usuario_id", nullable = false, unique = true)
     private Usuario usuario;
 
-    @Column(name = "curso_id", nullable = false)
+    @ManyToOne
+    @JoinColumn(name = "curso_id", nullable = false)
     private Curso curso;
 
     @Column(nullable = false, unique = true, length = 25)

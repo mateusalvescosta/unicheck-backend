@@ -2,12 +2,8 @@ package com.unicheck.usuario.domain;
 
 import java.time.OffsetDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.unicheck.usuario.enumeration.RoleUsuario;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,9 +22,16 @@ public class Usuario {
     private Long id;
 
     @Column(nullable = false, length = 255)
+    private String nome;
+
+    @Column(nullable = false, length = 255)
     private String senha;
 
-    @Column(name = "foto_url", nullable = false, length = 255)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private RoleUsuario role;
+
+    @Column(name = "foto_url", length = 255)
     private String fotoUrl;
 
     @Column(nullable = false, unique = true, length = 150)
@@ -36,4 +39,15 @@ public class Usuario {
 
     @Column(name = "criado_em", nullable = false, updatable = false)
     private OffsetDateTime criadoEm;
+
+    @OneToOne(mappedBy = "usuario")
+    private Aluno aluno;
+
+    @OneToOne(mappedBy = "usuario")
+    private Admin admin;
+
+    @PrePersist
+    protected void onCreate() {
+        this.criadoEm = OffsetDateTime.now();
+    }
 }

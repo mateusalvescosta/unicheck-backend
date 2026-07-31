@@ -14,7 +14,7 @@ import lombok.Setter;
 @Setter
 @Getter
 @Entity
-@Table(name = "tb_admin")
+@Table(name = "tb_curso")
 @AllArgsConstructor
 @NoArgsConstructor
 public class Curso {
