@@ -40,12 +40,6 @@ public class Usuario {
     @Column(name = "criado_em", nullable = false, updatable = false)
     private OffsetDateTime criadoEm;
 
-    @OneToOne(mappedBy = "usuario")
-    private Aluno aluno;
-
-    @OneToOne(mappedBy = "usuario")
-    private Admin admin;
-
     @PrePersist
     protected void onCreate() {
         this.criadoEm = OffsetDateTime.now();
