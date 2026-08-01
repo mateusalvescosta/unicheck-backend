@@ -1,0 +1,5 @@
+ALTER TABLE tb_admin ALTER COLUMN usuario_id TYPE BIGINT;
+
+ALTER TABLE tb_aluno ALTER COLUMN usuario_id TYPE BIGINT;
+
+ALTER TABLE tb_aluno ALTER COLUMN curso_id TYPE BIGINT;
