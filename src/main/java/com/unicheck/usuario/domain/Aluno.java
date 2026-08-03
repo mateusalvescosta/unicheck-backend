@@ -38,4 +38,14 @@ public class Aluno {
 
     @Column(nullable = false, length = 25)
     private String periodo;
+
+    @Column(name = "xp_total", nullable = false)
+    private Integer xptotal;
+
+    @PrePersist
+    protected  void onCreate() {
+        if (this.xptotal == null) {
+            this.xptotal = 0;
+        }
+    }
 }
