@@ -14,12 +14,6 @@ CREATE TABLE tb_item_checklist (
     ordem INT NOT NULL
 );
 
-CREATE TABLE tb_item_prerequisito (
-    item_checklist_id BIGINT NOT NULL REFERENCES tb_item_checklist(id),
-    item_requisito_id BIGINT NOT NULL REFERENCES tb_item_checklist(id),
-    PRIMARY KEY (item_checklist_id, item_requisito_id)
-);
-
 CREATE TABLE tb_checklist_prerequisito (
     checklist_id BIGINT NOT NULL REFERENCES tb_checklist(id),
     checklist_requisito_id BIGINT NOT NULL REFERENCES tb_checklist(id),
