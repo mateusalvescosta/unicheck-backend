@@ -21,6 +21,9 @@ public class ChecklistConcluido {
     @Column(columnDefinition = "TIMESTAMP")
     private OffsetDateTime dataConclusao;
 
+    @Column(name = "xp_creditado")
+    private Integer xpCreditado;
+
     @Column(name = "horas_creditadas")
     private Integer horasCreditadas;
 

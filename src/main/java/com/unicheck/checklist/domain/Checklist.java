@@ -45,6 +45,8 @@ public class Checklist {
     @Column(columnDefinition = "TEXT", length = 500)
     private String descricao;
 
+    private Integer xp;
+
     @Column(name = "horas_complementares")
     private Integer horasComplementares;
 
