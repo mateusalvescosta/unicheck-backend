@@ -1,5 +1,10 @@
 package com.unicheck.usuario.domain;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import com.unicheck.checklist.domain.ChecklistConcluido;
+import com.unicheck.checklist.domain.ProgressoItem;
 import com.unicheck.curso.domain.Curso;
 
 import com.unicheck.usuario.enumeration.StatusMatricula;
@@ -40,12 +45,18 @@ public class Aluno {
     private String periodo;
 
     @Column(name = "xp_total", nullable = false)
-    private Integer xptotal;
+    private Integer xpTotal;
 
     @PrePersist
-    protected  void onCreate() {
-        if (this.xptotal == null) {
-            this.xptotal = 0;
+    protected void onCreate() {
+        if (this.xpTotal == null) {
+            this.xpTotal = 0;
         }
     }
+
+    @OneToMany(mappedBy = "aluno")
+    private Set<ProgressoItem> progressos = new HashSet<>();
+
+    @OneToMany(mappedBy = "aluno")
+    private Set<ChecklistConcluido> concluidos = new HashSet<>()
 }

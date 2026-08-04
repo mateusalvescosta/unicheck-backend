@@ -3,6 +3,7 @@ CREATE TABLE tb_checklist (
     curso_id BIGINT REFERENCES tb_curso(id),
     nome VARCHAR(150) NOT NULL,
     descricao VARCHAR(500),
+    xp INTEGER,
     horas_complementares INTEGER
 );
 
@@ -12,12 +13,6 @@ CREATE TABLE tb_item_checklist (
     titulo VARCHAR(150) NOT NULL,
     descricao VARCHAR(500),
     ordem INT NOT NULL
-);
-
-CREATE TABLE tb_item_prerequisito (
-    item_checklist_id BIGINT NOT NULL REFERENCES tb_item_checklist(id),
-    item_requisito_id BIGINT NOT NULL REFERENCES tb_item_checklist(id),
-    PRIMARY KEY (item_checklist_id, item_requisito_id)
 );
 
 CREATE TABLE tb_checklist_prerequisito (
@@ -38,6 +33,7 @@ CREATE TABLE tb_checklist_concluido (
     aluno_id BIGINT NOT NULL REFERENCES tb_aluno(id),
     checklist_id BIGINT NOT NULL REFERENCES tb_checklist(id),
     data_conclusao TIMESTAMP NOT NULL,
+    xp_creditado INTEGER,
     horas_creditadas INTEGER,
     PRIMARY KEY (aluno_id, checklist_id)
 );
