@@ -37,6 +37,7 @@ public record LoginResponseDTO(
         String token,
         String tipo,
         RoleUsuario role,
-        String cargo
+        String cargo,
+        Boolean trocarSenhaObrigatorio // front redireciona pra tela de troca se vier true
 ) {
 }
