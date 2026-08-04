@@ -1,0 +1,1 @@
+ALTER TABLE tb_usuario ADD COLUMN trocar_senha_no_login BOOLEAN NOT NULL DEFAULT FALSE;

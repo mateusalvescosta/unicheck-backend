@@ -44,9 +44,19 @@ public class Aluno {
     @Column(nullable = false, length = 25)
     private String periodo;
 
-    @OneToMany(mappedBy = "id.aluno")
+    @Column(name = "xp_total", nullable = false)
+    private Integer xpTotal;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.xpTotal == null) {
+            this.xpTotal = 0;
+        }
+    }
+
+    @OneToMany(mappedBy = "aluno")
     private Set<ProgressoItem> progressos = new HashSet<>();
 
-    @OneToMany(mappedBy = "id.aluno")
+    @OneToMany(mappedBy = "aluno")
     private Set<ChecklistConcluido> concluidos = new HashSet<>();
 }

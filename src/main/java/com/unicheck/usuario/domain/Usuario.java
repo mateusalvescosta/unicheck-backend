@@ -40,8 +40,17 @@ public class Usuario {
     @Column(name = "criado_em", nullable = false, updatable = false)
     private OffsetDateTime criadoEm;
 
+    // NOVO: controla se esse usuário precisa trocar a senha no próximo login.
+    // true = senha temporária (definida por outra pessoa, ex: Admin criando outro Admin)
+    // false = o próprio usuário escolheu a senha (cadastro público de Aluno, ou já trocou)
+    @Column(name = "trocar_senha_no_login", nullable = false)
+    private Boolean trocarSenhaNoLogin;
+
     @PrePersist
     protected void onCreate() {
         this.criadoEm = OffsetDateTime.now();
+        if (this.trocarSenhaNoLogin ==  null) {
+            this.trocarSenhaNoLogin = false; // default: não precisa trocar
+        }
     }
 }
