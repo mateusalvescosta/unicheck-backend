@@ -1,5 +1,7 @@
 package com.unicheck.usuario.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 /**
  * DTO de ENTRADA do login (endpoint tipo POST /auth/login).
  *
@@ -23,7 +25,10 @@ package com.unicheck.usuario.dto;
  * campo-a-campo automática que faça sentido aqui).
  */
 public record LoginRequestDTO(
+        @NotBlank(message = "Informe seu RA ou email!")
         String login,
+
+        @NotBlank(message = "Senha é obrigatória!")
         String senha
 ) {
 }

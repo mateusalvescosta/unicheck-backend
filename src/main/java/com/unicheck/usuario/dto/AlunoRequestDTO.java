@@ -1,6 +1,8 @@
 package com.unicheck.usuario.dto;
 
 import com.unicheck.usuario.enumeration.StatusMatricula;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * DTO de ENTRADA (Request) do Aluno.
@@ -18,10 +20,19 @@ import com.unicheck.usuario.enumeration.StatusMatricula;
  * AlunoMapper (vê o comentário lá no mapper).
  */
 public record AlunoRequestDTO(
+        @NotNull(message = "Usuário é obrigatório!")
         Long usuarioId,
+
+        @NotNull(message = "Curso é obrigatório!")
         Long cursoId,
+
+        @NotBlank(message = "RA é obrigatório!")
         String ra,
+
+        @NotNull(message = "Status de matrícula é obrigatório!")
         StatusMatricula status,
+
+        @NotBlank(message = "Período é obrigatório!")
         String periodo
 ) {
 }
