@@ -1,16 +1,16 @@
 package com.unicheck.exception;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -32,23 +32,17 @@ public class GlobalExceptionHandler {
      *
      * Retorna HTTP 404 (Not Found).
      */
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ProblemDetail> handleResourceNotFound(
-            ResourceNotFoundException ex,
-            HttpServletRequest request) {
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ProblemDetail handleEntityNotFound(EntityNotFoundException ex, HttpServletRequest request) {
 
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
 
-        problem.setTitle("Recurso não encontrado");
-        problem.setDetail(ex.getMessage());
+        problem.setProperty("timestamp", Instant.now());
+        problem.setTitle("Recurso não encontrado.");
         problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setStatus(404);
 
-        problem.setProperty("timestamp", OffsetDateTime.now());
-        problem.setProperty("code", "UC-404");
-
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(problem);
+        return problem;
     }
 
     /**
@@ -60,88 +54,50 @@ public class GlobalExceptionHandler {
      * Retorna HTTP 422 (Unprocessable Entity).
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ProblemDetail> handleValidation(
-            MethodArgumentNotValidException ex,
-            HttpServletRequest request) {
+    public ProblemDetail handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpServletRequest request) {
 
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_ENTITY);
 
-        problem.setTitle("Dados inválidos");
-        problem.setDetail("Um ou mais campos da requisição são inválidos.");
+        problem.setProperty("timestamp", Instant.now());
+        problem.setTitle("Um ou mais dados inválidos.");
         problem.setInstance(URI.create(request.getRequestURI()));
-
-        problem.setProperty("timestamp", OffsetDateTime.now());
-        problem.setProperty("code", "UC-422");
+        problem.setStatus(422);
 
         List<Map<String, String>> errors = ex.getBindingResult()
-                .getFieldErrors()
-                .stream()
+                .getFieldErrors().stream()
                 .map(error -> Map.of(
                         "field", error.getField(),
                         "message", error.getDefaultMessage()
-                ))
-                .toList();
+                )).toList();
 
         problem.setProperty("errors", errors);
 
-        return ResponseEntity
-                .status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(problem);
+        return problem;
     }
 
     /**
-     * Trata violações de integridade no banco de dados.
+     * Trata violações de integridade no banco de dados que não foram
+     * antecipadas pela camada de serviço (ex: corrida entre duas requisições
+     * simultâneas, ou remoção de registro ainda referenciado por outro).
      *
-     * Exemplos:
-     * - Email já cadastrado.
-     * - Violação de chave única.
-     * - Exclusão de registro referenciado por outra entidade.
+     * A distinção entre duplicidade e registro em uso é feita pelo método
+     * HTTP da requisição, nunca por parsing da mensagem do banco — assim
+     * nenhum nome de tabela, constraint ou SQL chega ao cliente (RF-SEC-004).
+     * O detalhe original vai só para o log, com um id de rastreio.
      *
-     * Retorna HTTP 400 (Bad Request).
+     * Retorna HTTP 409 (Conflict).
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ProblemDetail> handleDataIntegrity(
-            DataIntegrityViolationException ex,
-            HttpServletRequest request) {
+    public ProblemDetail handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
 
-        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-
-        problem.setTitle("Violação de integridade");
-        problem.setDetail(ex.getMostSpecificCause().getMessage());
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        
+        problem.setProperty("timestamp", Instant.now());
+        problem.setTitle("Operação não permitida: violação de integridade dos dados.");
         problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setStatus(409);
 
-        problem.setProperty("timestamp", OffsetDateTime.now());
-        problem.setProperty("code", "UC-400");
-
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(problem);
+        return problem;
     }
 
-    /**
-     * Trata qualquer exceção não tratada especificamente.
-     *
-     * Funciona como uma "rede de segurança", evitando que
-     * detalhes internos da aplicação sejam enviados ao cliente.
-     *
-     * Retorna HTTP 500 (Internal Server Error).
-     */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ProblemDetail> handleGeneric(
-            Exception ex,
-            HttpServletRequest request) {
-
-        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-
-        problem.setTitle("Erro interno");
-        problem.setDetail("Ocorreu um erro inesperado. Tente novamente mais tarde.");
-        problem.setInstance(URI.create(request.getRequestURI()));
-
-        problem.setProperty("timestamp", OffsetDateTime.now());
-        problem.setProperty("code", "UC-500");
-
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(problem);
-    }
 }
