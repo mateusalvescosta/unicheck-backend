@@ -13,7 +13,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -32,10 +31,6 @@ public class Beneficio {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToMany
-    @JoinColumn(name = "curso_id")
-    private Curso curso;
-
     @Column(name = "icone_url", length = 255)
     private String iconeUrl;
 
@@ -49,8 +44,39 @@ public class Beneficio {
     private String url;
 
     @ManyToMany
-    @JoinTable(name = "tb_baneficio_categoria",
+    @JoinTable(name = "tb_beneficio_categoria",
         joinColumns = @JoinColumn(name = "beneficio_id"),
         inverseJoinColumns = @JoinColumn(name = "categoria_id"))
     private Set<Categoria> categorias = new HashSet<>();
+
+    @ManyToMany
+    @JoinTable(name = "tb_beneficio_curso",
+        joinColumns = @JoinColumn(name = "beneficio_id"),
+        inverseJoinColumns = @JoinColumn(name = "curso_id"))
+    private Set<Curso> cursos = new HashSet<>();
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((id == null) ? 0 : id.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        Beneficio other = (Beneficio) obj;
+        if (id == null) {
+            if (other.id != null)
+                return false;
+        } else if (!id.equals(other.id))
+            return false;
+        return true;
+    }
 }
