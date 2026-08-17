@@ -45,8 +45,8 @@ public class CursoController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<CursoResponseDTO>> buscarPorNome(@RequestParam(defaultValue = "") String nome, @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(service.findByName(nome, pageable));
+    public ResponseEntity<Page<CursoResponseDTO>> buscarTodos(@RequestParam(defaultValue = "") String nome, @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(service.findAll(nome, pageable));
     }
 
     @PutMapping("/{id}")
