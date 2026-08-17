@@ -11,12 +11,12 @@ import org.mapstruct.MappingTarget;
 public interface CursoMapper {
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "checklists", ignore = true)
+    @Mapping(target = "beneficios", ignore = true)
     Curso toEntity(CursoRequestDTO dto);
 
     CursoResponseDTO toDto(Curso curso);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "checklists", ignore = true)
+    @Mapping(target = "beneficios", ignore = true)
     void update(@MappingTarget Curso curso, CursoRequestDTO dto);
 }

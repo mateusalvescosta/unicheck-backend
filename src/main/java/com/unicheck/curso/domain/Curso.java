@@ -1,16 +1,16 @@
 package com.unicheck.curso.domain;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
-import com.unicheck.checklist.domain.Checklist;
+import com.unicheck.beneficio.domain.Beneficio;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -32,6 +32,6 @@ public class Curso {
     @Column(nullable = false, length = 100, unique = true)
     private String nome;
 
-    @OneToMany(mappedBy = "curso")
-    private List<Checklist> checklists = new ArrayList<>();
+    @ManyToMany(mappedBy = "cursos")
+    private Set<Beneficio> beneficios = new HashSet<>();
 }
