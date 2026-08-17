@@ -54,9 +54,9 @@ public class Aluno {
         }
     }
 
-    @OneToMany(mappedBy = "aluno")
+    @OneToMany(mappedBy = "id.aluno")
     private Set<ProgressoItem> progressos = new HashSet<>();
 
-    @OneToMany(mappedBy = "aluno")
+    @OneToMany(mappedBy = "id.aluno")
     private Set<ChecklistConcluido> concluidos = new HashSet<>();
 }
