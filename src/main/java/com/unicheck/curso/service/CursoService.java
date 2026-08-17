@@ -26,7 +26,7 @@ public class CursoService {
     }
 
     @Transactional(readOnly = true)
-    public Page<CursoResponseDTO> findByName(String nome, Pageable pageable) {
+    public Page<CursoResponseDTO> findAll(String nome, Pageable pageable) {
         Page<Curso> result = repository.findByNomeContainingIgnoreCase(nome, pageable);
         return result.map(x -> mapper.toDto(x));
     }
