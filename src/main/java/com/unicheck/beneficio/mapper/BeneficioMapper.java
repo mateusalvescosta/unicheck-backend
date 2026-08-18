@@ -6,6 +6,8 @@ import org.mapstruct.MappingTarget;
 
 import com.unicheck.beneficio.domain.Beneficio;
 import com.unicheck.beneficio.dto.BeneficioRequestDTO;
+import com.unicheck.beneficio.dto.BeneficioSummaryDTO;
+import com.unicheck.beneficio.dto.BeneficioResponseDTO;
 
 
 @Mapper(componentModel = "spring")
@@ -15,12 +17,10 @@ public interface BeneficioMapper {
     @Mapping(target = "categorias", ignore = true)
     Beneficio toEntity(BeneficioRequestDTO dto);
 
-    BeneficioRequestDTO toDto(Beneficio entity);
+    BeneficioResponseDTO toDto(Beneficio entity);
+    BeneficioSummaryDTO toDtoSummary(Beneficio entity);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "categorias", ignore = true)
     void update(@MappingTarget Beneficio entity, BeneficioRequestDTO dto);
-
-
-    
 }
