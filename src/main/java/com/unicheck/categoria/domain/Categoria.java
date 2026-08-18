@@ -1,7 +1,9 @@
-package com.unicheck.beneficio.domain;
+package com.unicheck.categoria.domain;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import com.unicheck.beneficio.domain.Beneficio;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
