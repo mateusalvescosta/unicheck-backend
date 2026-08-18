@@ -49,12 +49,6 @@ public class Beneficio {
         inverseJoinColumns = @JoinColumn(name = "categoria_id"))
     private Set<Categoria> categorias = new HashSet<>();
 
-    @ManyToMany
-    @JoinTable(name = "tb_beneficio_curso",
-        joinColumns = @JoinColumn(name = "beneficio_id"),
-        inverseJoinColumns = @JoinColumn(name = "curso_id"))
-    private Set<Curso> cursos = new HashSet<>();
-
     @Override
     public int hashCode() {
         final int prime = 31;
