@@ -2,12 +2,12 @@ package com.unicheck.exception;
 
 /**
  * Exception lançada quando um recurso solicitado não é encontrado no banco.
- * Usada por todos os domínios (usuario, curso, checklist, etc) para sinalizar
+ * Usada por todos os domínios (usuario, checklist, etc) para sinalizar
  * de forma padronizada que um ID buscado não existe.
  *
  * Exemplo de uso no service:
- *   Curso curso = cursoRepository.findById(id)
- *       .orElseThrow(() -> new ResourceNotFoundException("Curso", id));
+ *   Aluno aluno = alunoRepository.findById(id)
+ *       .orElseThrow(() -> new ResourceNotFoundException("Aluno", id));
  *
  * É capturada automaticamente pelo GlobalExceptionHandler, que devolve
  * um HTTP 404 com corpo JSON padronizado.
