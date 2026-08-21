@@ -4,17 +4,14 @@ import java.time.OffsetDateTime;
 
 import com.unicheck.usuario.domain.Aluno;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.EmbeddedId;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "tb_checklist_concluido")
 @NoArgsConstructor
 public class ChecklistConcluido {
-    
+
     @EmbeddedId
     private ChecklistConcluidoPK id = new ChecklistConcluidoPK();
 

@@ -5,7 +5,6 @@ import java.util.Set;
 
 import com.unicheck.checklist.domain.ChecklistConcluido;
 import com.unicheck.checklist.domain.ProgressoItem;
-import com.unicheck.curso.domain.Curso;
 
 import com.unicheck.usuario.enumeration.StatusMatricula;
 import jakarta.persistence.*;
@@ -30,13 +29,6 @@ public class Aluno {
     @JoinColumn(name = "usuario_id", nullable = false, unique = true)
     private Usuario usuario;
 
-    @ManyToOne
-    @JoinColumn(name = "curso_id", nullable = false)
-    private Curso curso;
-
-    @Column(nullable = false, unique = true, length = 25)
-    private String ra;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status_matricula",nullable = false, length = 25)
     private StatusMatricula status;
@@ -54,9 +46,9 @@ public class Aluno {
         }
     }
 
-    @OneToMany(mappedBy = "aluno")
+    @OneToMany(mappedBy = "id.aluno")
     private Set<ProgressoItem> progressos = new HashSet<>();
 
-    @OneToMany(mappedBy = "aluno")
+    @OneToMany(mappedBy = "id.aluno")
     private Set<ChecklistConcluido> concluidos = new HashSet<>();
 }
