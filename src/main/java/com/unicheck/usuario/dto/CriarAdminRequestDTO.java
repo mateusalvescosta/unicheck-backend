@@ -2,7 +2,9 @@ package com.unicheck.usuario.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
+
+import java.time.LocalDate;
 
 /**
  * DTO usado por um Admin já logado pra criar outro Admin.
@@ -24,9 +26,11 @@ public record CriarAdminRequestDTO(
         @Email(message = "Email inválido")
         String email,
 
-        @NotBlank(message = "Senha temporária é obrigatória")
-        @Size(min = 8, message = "Senha deve ter no mínimo 8 caracteres")
-        String senha,
+        @NotBlank(message = "RA é obrigatório")
+        String ra,
+
+        @NotNull(message = "Data de nascimento é obrigatória")
+        LocalDate dataNascimento,
 
         @NotBlank(message = "Cargo é obrigatório")
         String cargo
