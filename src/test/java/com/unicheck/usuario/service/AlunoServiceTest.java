@@ -116,6 +116,22 @@ class AlunoServiceTest {
         verify(alunoRepository, never()).save(any());
     }
 
+    @Test
+    void deletarRemovePerfilAntesDoUsuarioRelacionado() {
+        Usuario usuario = usuario(RoleUsuario.ALUNO);
+        Aluno aluno = new Aluno();
+        aluno.setId(10L);
+        aluno.setUsuario(usuario);
+        when(alunoRepository.findById(10L)).thenReturn(Optional.of(aluno));
+
+        alunoService.deletar(10L);
+
+        var ordem = inOrder(alunoRepository, usuarioRepository);
+        ordem.verify(alunoRepository).delete(aluno);
+        ordem.verify(alunoRepository).flush();
+        ordem.verify(usuarioRepository).delete(usuario);
+    }
+
     private CadastroAlunoRequestDTO cadastroDto() {
         return new CadastroAlunoRequestDTO(
                 "Fulano de Tal", "fulano@teste.com", "RA001",

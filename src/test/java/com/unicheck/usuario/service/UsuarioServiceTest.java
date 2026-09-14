@@ -21,65 +21,43 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * AdminService saiu das dependencias de UsuarioService: a criacao de ADMIN agora
+ * e responsabilidade exclusiva de AdminService/POST /admins (ver AdminServiceTest).
+ * Por isso os cenarios antigos de "criar admin via /usuarios" foram substituidos
+ * pelo teste que garante que esse endpoint rejeita qualquer role diferente de ALUNO.
+ */
 @ExtendWith(MockitoExtension.class)
 class UsuarioServiceTest {
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private UsuarioMapper usuarioMapper;
     @Mock private PasswordEncoder passwordEncoder;
-    @Mock private AdminService adminService;
     @Mock private UsuarioValidacaoService usuarioValidacaoService;
     @InjectMocks private UsuarioService usuarioService;
 
     @Test
-    void criarAlunoNaoCriaRegistroAdmin() {
-        UsuarioRequestDTO dto = dto(RoleUsuario.ALUNO, null);
+    void criarAlunoValidoSalvaUsuarioComSenhaCriptografadaESemTrocaObrigatoria() {
+        UsuarioRequestDTO dto = dto(RoleUsuario.ALUNO);
         Usuario usuario = usuario(RoleUsuario.ALUNO);
         when(usuarioMapper.toEntity(dto)).thenReturn(usuario);
         when(passwordEncoder.encode("senha-segura")).thenReturn("hash");
 
         usuarioService.criar(dto);
 
+        verify(usuarioValidacaoService).validarUnicidade("RA001", "email@teste.com");
         verify(usuarioRepository).save(usuario);
-        verify(adminService, never()).criarRegistro(any(), any());
+        assertEquals("hash", usuario.getSenha());
+        assertFalse(usuario.getTrocarSenhaNoLogin());
     }
 
     @Test
-    void criarAdminCriaRegistroAdminNaMesmaOperacao() {
-        UsuarioRequestDTO dto = dto(RoleUsuario.ADMIN, "COORDENADOR");
-        Usuario usuario = usuario(RoleUsuario.ADMIN);
-        when(usuarioMapper.toEntity(dto)).thenReturn(usuario);
-        when(passwordEncoder.encode("01012000")).thenReturn("hash");
-
-        usuarioService.criar(dto);
-
-        verify(usuarioRepository).save(usuario);
-        verify(adminService).criarRegistro(usuario, "COORDENADOR");
-        assertTrue(usuario.getTrocarSenhaNoLogin());
-    }
-
-    @Test
-    void criarAdminSemCargoFalhaAntesDePersistirUsuario() {
-        UsuarioRequestDTO dto = dto(RoleUsuario.ADMIN, " ");
+    void criarComRoleAdminLancaResourceConflictAntesDeQualquerValidacaoOuPersistencia() {
+        // Este endpoint so cria ALUNO; criar ADMIN e exclusivo de POST /admins (AdminService).
+        UsuarioRequestDTO dto = dto(RoleUsuario.ADMIN);
 
         assertThrows(ResourceConflictException.class, () -> usuarioService.criar(dto));
 
-        verify(usuarioRepository, never()).save(any());
-        verify(adminService, never()).criarRegistro(any(), any());
-    }
-
-    @Test
-    void falhaAoCriarRegistroAdminInterrompeACriacaoTransacional() {
-        UsuarioRequestDTO dto = dto(RoleUsuario.ADMIN, "COORDENADOR");
-        Usuario usuario = usuario(RoleUsuario.ADMIN);
-        when(usuarioMapper.toEntity(dto)).thenReturn(usuario);
-        when(passwordEncoder.encode("01012000")).thenReturn("hash");
-        doThrow(new IllegalStateException("falha simulada no registro Admin"))
-                .when(adminService).criarRegistro(usuario, "COORDENADOR");
-
-        assertThrows(IllegalStateException.class, () -> usuarioService.criar(dto));
-
-        // O metodo testado e @Transactional; ao propagar a falha, o Spring desfaz inclusive o save do Usuario no banco.
-        verify(usuarioRepository).save(usuario);
+        verifyNoInteractions(usuarioValidacaoService, usuarioMapper, usuarioRepository, passwordEncoder);
     }
 
     @Test
@@ -108,24 +86,16 @@ class UsuarioServiceTest {
                 () -> usuarioService.trocarSenha("RA001", new TrocarSenhaRequestDTO("errada", "senha-nova")));
     }
 
-    @Test
-    void criarAlunoSemSenhaLancaResourceConflictAntesDePersistir() {
-        // Diferente do ADMIN (senha temporaria gerada pelo servidor), para ALUNO a senha e obrigatoria aqui.
-        UsuarioRequestDTO dto = dto(RoleUsuario.ALUNO, null, "   ");
-        Usuario usuario = usuario(RoleUsuario.ALUNO);
-        when(usuarioMapper.toEntity(dto)).thenReturn(usuario);
+    // Nao ha mais teste de "senha em branco" na Service: apos a mudanca, isso e um
+    // @NotBlank no UsuarioRequestDTO, validado pelo @Valid no Controller antes de a
+    // requisicao sequer chegar aqui. Cobrir isso em teste de Service reimplementaria
+    // o Bean Validation na mao; o lugar certo pra esse caso e um teste de integracao
+    // do Controller (ex.: MockMvc esperando 400) ou um teste direto do DTO com um
+    // jakarta.validation.Validator.
 
-        assertThrows(ResourceConflictException.class, () -> usuarioService.criar(dto));
-
-        verify(usuarioRepository, never()).save(any());
-    }
-
-    private UsuarioRequestDTO dto(RoleUsuario role, String cargo) {
-        return dto(role, cargo, "senha-segura");
-    }
-
-    private UsuarioRequestDTO dto(RoleUsuario role, String cargo, String senha) {
-        return new UsuarioRequestDTO("Nome", senha, "RA001", LocalDate.of(2000, 1, 1), role, cargo, null, "email@teste.com");
+    private UsuarioRequestDTO dto(RoleUsuario role) {
+        return new UsuarioRequestDTO("Nome", "senha-segura", "RA001",
+                LocalDate.of(2000, 1, 1), role, null, "email@teste.com");
     }
 
     private Usuario usuario(RoleUsuario role) {

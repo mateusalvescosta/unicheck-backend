@@ -1,9 +1,9 @@
-package com.unicheck.usuario.service;
+package com.unicheck.auth.service;
 
+import com.unicheck.auth.dto.LoginRequestDTO;
+import com.unicheck.auth.dto.LoginResponseDTO;
 import com.unicheck.usuario.domain.Admin;
 import com.unicheck.usuario.domain.Usuario;
-import com.unicheck.usuario.dto.LoginRequestDTO;
-import com.unicheck.usuario.dto.LoginResponseDTO;
 import com.unicheck.usuario.enumeration.RoleUsuario;
 import com.unicheck.usuario.repository.AdminRepository;
 import org.junit.jupiter.api.Test;
@@ -16,6 +16,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -43,6 +44,9 @@ class AuthServiceTest {
         assertEquals(RoleUsuario.ALUNO, response.role());
         assertNull(response.cargo());
         assertFalse(response.trocarSenhaObrigatorio());
+        JwtEncoderParameters parametros = capturarParametrosDoToken();
+        assertEquals("https://unicheck.local", parametros.getClaims().getIssuer().toString());
+        assertEquals(false, parametros.getClaims().getClaim("trocarSenhaObrigatorio"));
         // Aluno nao tem cargo; a Service nem deve consultar o AdminRepository nesse caso.
         verify(adminRepository, never()).findByUsuarioId(any());
     }
@@ -64,6 +68,8 @@ class AuthServiceTest {
         assertEquals("COORDENADOR", response.cargo());
         // trocarSenhaNoLogin=true simula o primeiro acesso apos criacao pelo fluxo de Admin.
         assertTrue(response.trocarSenhaObrigatorio());
+        JwtEncoderParameters parametros = capturarParametrosDoToken();
+        assertEquals(true, parametros.getClaims().getClaim("trocarSenhaObrigatorio"));
     }
 
     @Test
@@ -101,5 +107,23 @@ class AuthServiceTest {
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(3600))
                 .build();
+    }
+
+    @Test
+    void adminSemPerfilVinculadoNaoRecebeTokenAdministrativo() {
+        Usuario usuario = usuario(RoleUsuario.ADMIN, "ADMIN-INCONSISTENTE", false);
+        mockAutenticacaoComSucesso(usuario);
+        when(adminRepository.findByUsuarioId(usuario.getId())).thenReturn(Optional.empty());
+
+        assertThrows(BadCredentialsException.class,
+                () -> authService.login(new LoginRequestDTO("ADMIN-INCONSISTENTE", "senha-teste")));
+
+        verify(jwtEncoder, never()).encode(any());
+    }
+
+    private JwtEncoderParameters capturarParametrosDoToken() {
+        var captor = org.mockito.ArgumentCaptor.forClass(JwtEncoderParameters.class);
+        verify(jwtEncoder).encode(captor.capture());
+        return captor.getValue();
     }
 }
