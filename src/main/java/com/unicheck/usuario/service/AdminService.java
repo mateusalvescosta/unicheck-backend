@@ -66,8 +66,12 @@ public class AdminService {
 
     @Transactional
     public void deletar(Long id) {
-        // Busca antes de excluir para devolver 404 consistente em vez de um delete silencioso.
-        adminRepository.delete(buscarEntidade(id));
+        Admin admin = buscarEntidade(id);
+        Usuario usuario = admin.getUsuario();
+        // Papel e perfil formam uma unica identidade: remover apenas tb_admin deixaria um ADMIN incoerente.
+        adminRepository.delete(admin);
+        adminRepository.flush();
+        usuarioRepository.delete(usuario);
     }
 
     private Admin buscarEntidade(Long id) {

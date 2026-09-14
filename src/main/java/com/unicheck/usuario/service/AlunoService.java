@@ -43,7 +43,7 @@ public class AlunoService {
         usuario.setDataNascimento(dto.dataNascimento());
         usuario.setRole(RoleUsuario.ALUNO);
         // O proprio aluno escolhe a senha no cadastro; nao ha mais senha temporaria/troca obrigatoria para ALUNO.
-        usuario.setSenha(passwordEncoder.encode(passwordEncoder.encode(dto.senha())));
+        usuario.setSenha(passwordEncoder.encode(dto.senha()));
         usuario.setTrocarSenhaNoLogin(false);
         usuarioRepository.save(usuario);
 
@@ -84,8 +84,12 @@ public class AlunoService {
 
     @Transactional
     public void deletar(Long id) {
-        // Busca antes de excluir para devolver 404 consistente em vez de um delete silencioso.
-        alunoRepository.delete(buscarEntidade(id));
+        Aluno aluno = buscarEntidade(id);
+        Usuario usuario = aluno.getUsuario();
+        // A exclusao participa da mesma transacao para nunca deixar Usuario ALUNO sem o perfil correspondente.
+        alunoRepository.delete(aluno);
+        alunoRepository.flush();
+        usuarioRepository.delete(usuario);
     }
 
     private Aluno buscarEntidade(Long id) {

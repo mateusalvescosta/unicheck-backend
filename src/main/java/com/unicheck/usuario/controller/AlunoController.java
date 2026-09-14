@@ -2,6 +2,7 @@ package com.unicheck.usuario.controller;
 
 import com.unicheck.usuario.dto.*;
 import com.unicheck.usuario.service.AlunoService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,14 +15,9 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class AlunoController {
     private final AlunoService alunoService;
-
-    @PostMapping("/auth/cadastro")
-    public ResponseEntity<AlunoResponseDTO> cadastrar(@Valid @RequestBody CadastroAlunoRequestDTO dto) {
-        // Este e o unico endpoint de aluno sem token, pois e a porta de entrada do calouro.
-        return criado(alunoService.cadastrar(dto));
-    }
 
     @PostMapping("/alunos")
     @PreAuthorize("hasRole('ADMIN')")

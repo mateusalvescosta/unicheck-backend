@@ -3,6 +3,7 @@ package com.unicheck.usuario.controller;
 import com.unicheck.usuario.dto.AdminResponseDTO;
 import com.unicheck.usuario.dto.CriarAdminRequestDTO;
 import com.unicheck.usuario.service.AdminService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 // A protecao na classe evita esquecer a restricao ao adicionar uma operacao administrativa nova.
 @PreAuthorize("hasRole('ADMIN')")
+@SecurityRequirement(name = "bearerAuth")
 public class AdminController {
     private final AdminService adminService;
 

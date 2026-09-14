@@ -9,7 +9,6 @@ import com.unicheck.usuario.dto.UsuarioResponseDTO;
 import com.unicheck.usuario.mapper.UsuarioMapper;
 import com.unicheck.usuario.repository.UsuarioRepository;
 import com.unicheck.usuario.enumeration.RoleUsuario;
-import com.unicheck.usuario.util.SenhaTemporariaUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,31 +23,22 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final UsuarioMapper usuarioMapper;
     private final PasswordEncoder passwordEncoder;
-    private final AdminService adminService;
     private final UsuarioValidacaoService usuarioValidacaoService;
 
     @Transactional
     public UsuarioResponseDTO criar(UsuarioRequestDTO dto) {
+        // Unico caminho para criar ADMIN e POST /admins (AdminService.criar): la a senha temporaria
+        // e gerada no servidor e a troca no primeiro login e obrigatoria. Duplicar essa regra aqui
+        // criava dois fluxos divergentes para o mesmo caso de uso, entao esse endpoint agora so aceita ALUNO.
+        if (dto.role() != RoleUsuario.ALUNO) {
+            throw new ResourceConflictException("Use POST /admins para criar usuarios ADMIN");
+        }
         // A verificacao antecipada transforma unicidade de RA/email em erro de negocio claro; o banco continua sendo a garantia final.
         usuarioValidacaoService.validarUnicidade(dto.ra(), dto.email());
-        if (dto.role() == RoleUsuario.ADMIN && (dto.cargo() == null || dto.cargo().isBlank())) {
-            // cargo e obrigatorio em tb_admin; validar antes de persistir evita iniciar uma composicao invalida.
-            throw new ResourceConflictException("Cargo e obrigatorio para usuario ADMIN");
-        }
         Usuario usuario = usuarioMapper.toEntity(dto);
-        if (usuario.getRole() == RoleUsuario.ADMIN) {
-            // Admin segue a mesma regra de primeiro acesso do endpoint especifico: senha temporaria e troca obrigatoria.
-            usuario.setSenha(passwordEncoder.encode(SenhaTemporariaUtil.gerar(dto.dataNascimento())));
-            usuario.setTrocarSenhaNoLogin(true);
-        } else {
-            usuario.setSenha(passwordEncoder.encode(dto.senha()));
-            usuario.setTrocarSenhaNoLogin(false);
-        }
+        usuario.setSenha(passwordEncoder.encode(dto.senha()));
+        usuario.setTrocarSenhaNoLogin(false);
         usuarioRepository.save(usuario);
-
-        if (usuario.getRole() == RoleUsuario.ADMIN) {
-            adminService.criarRegistro(usuario, dto.cargo());
-        }
         return usuarioMapper.toResponseDTO(usuario);
     }
 
