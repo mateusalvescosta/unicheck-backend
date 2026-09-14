@@ -5,7 +5,7 @@ import com.unicheck.checklist.dto.*;
 import com.unicheck.checklist.enumeration.*;
 import com.unicheck.checklist.repository.*;
 import com.unicheck.exception.*;
-import com.unicheck.gamificacao.service.GamificacaoService;
+import com.unicheck.gameficacao.service.GameficacaoService;
 import com.unicheck.usuario.domain.Aluno;
 import com.unicheck.usuario.service.IdentidadeService;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public class ChecklistAlunoService {
     private final ChecklistConcluidoRepository concluidoRepository;
     private final ChecklistPrerequisitoRepository prerequisitoRepository;
     private final IdentidadeService identidadeService;
-    private final GamificacaoService gamificacaoService;
+    private final GameficacaoService gameficacaoService;
 
     @Transactional(readOnly = true)
     public List<ChecklistAlunoResponseDTO> listar(String ra) {
@@ -85,7 +85,7 @@ public class ChecklistAlunoService {
         ProgressoItem progresso = existente.orElseGet(() -> new ProgressoItem(aluno, item, StatusProgressoItem.CONCLUIDO, agora));
         progresso.setStatus(StatusProgressoItem.CONCLUIDO); progresso.setDataConclusao(agora); progresso.setXpCreditado(item.getXp());
         progressoRepository.save(progresso);
-        gamificacaoService.concederXp(aluno, item.getXp(), agora);
+        gameficacaoService.concederXp(aluno, item.getXp(), agora);
 
         List<ItemChecklist> itens = itemRepository.findByChecklistIdOrderByOrdem(checklistId);
         boolean ultima = item.getOrdem().equals(itens.getLast().getOrdem());
@@ -99,7 +99,7 @@ public class ChecklistAlunoService {
                 conclusao.setStatusLancamentoHoras(checklist.getHorasComplementares() > 0
                         ? StatusLancamentoHoras.PENDENTE : StatusLancamentoHoras.NAO_APLICAVEL);
                 concluidoRepository.save(conclusao);
-                gamificacaoService.concederXp(aluno, checklist.getXp(), agora);
+                gameficacaoService.concederXp(aluno, checklist.getXp(), agora);
             }
         }
         return retorno(checklist, item, progresso, conclusao, aluno, false);
