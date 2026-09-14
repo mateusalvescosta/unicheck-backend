@@ -9,27 +9,28 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.io.Serializable;
+import java.util.Objects;
+
 @Setter
 @Getter
 @Embeddable
 @NoArgsConstructor
-public class ChecklistConcluidoPK {
+public class ChecklistConcluidoPK implements Serializable {
+
+    private static final long serialVersionUID = 1L;
     
     @ManyToOne
-    @JoinColumn(name = "aluno_id")
+    @JoinColumn(name = "aluno_id", nullable = false)
     private Aluno aluno;
 
     @ManyToOne
-    @JoinColumn(name = "checklist_id")
+    @JoinColumn(name = "checklist_id", nullable = false)
     private Checklist checklist;
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((aluno == null) ? 0 : aluno.hashCode());
-        result = prime * result + ((checklist == null) ? 0 : checklist.hashCode());
-        return result;
+        return Objects.hash(idAluno(), idChecklist());
     }
 
     @Override
@@ -38,19 +39,11 @@ public class ChecklistConcluidoPK {
             return true;
         if (obj == null)
             return false;
-        if (getClass() != obj.getClass())
+        if (!(obj instanceof ChecklistConcluidoPK other))
             return false;
-        ChecklistConcluidoPK other = (ChecklistConcluidoPK) obj;
-        if (aluno == null) {
-            if (other.aluno != null)
-                return false;
-        } else if (!aluno.equals(other.aluno))
-            return false;
-        if (checklist == null) {
-            if (other.checklist != null)
-                return false;
-        } else if (!checklist.equals(other.checklist))
-            return false;
-        return true;
+        return Objects.equals(idAluno(), other.idAluno()) && Objects.equals(idChecklist(), other.idChecklist());
     }
+
+    private Long idAluno() { return aluno == null ? null : aluno.getId(); }
+    private Long idChecklist() { return checklist == null ? null : checklist.getId(); }
 }
