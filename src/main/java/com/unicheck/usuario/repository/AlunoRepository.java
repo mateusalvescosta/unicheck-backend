@@ -2,6 +2,10 @@ package com.unicheck.usuario.repository;
 
 import com.unicheck.usuario.domain.Aluno;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 import java.util.Optional;
 
@@ -12,14 +16,15 @@ import java.util.Optional;
  */
 public interface AlunoRepository extends JpaRepository<Aluno, Long> {
 
-    // RA é único (@Column(unique = true)), então é o principal ponto de busca
-    // além do id -- ex: consultar o aluno pelo RA na tela de checklist.
-    Optional<Aluno> findByRa(String ra);
+    Optional<Aluno> findByUsuario_Ra(String ra);
 
     // Caso precise achar o Aluno a partir do id do Usuario associado
     // (ex: usuário logado via JWT, e você quer os dados de Aluno dele).
     // Spring entende "By Usuario Id" como usuario.id por causa do relacionamento @OneToOne.
     Optional<Aluno> findByUsuarioId(Long usuarioId);
 
-    boolean existsByRa(String ra);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from Aluno a where a.usuario.ra = :ra")
+    Optional<Aluno> bloquearPorRa(@Param("ra") String ra);
+
 }

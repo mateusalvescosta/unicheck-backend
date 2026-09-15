@@ -1,4 +1,4 @@
-package com.unicheck.usuario.dto;
+package com.unicheck.auth.dto;
 
 import com.unicheck.usuario.enumeration.RoleUsuario;
 

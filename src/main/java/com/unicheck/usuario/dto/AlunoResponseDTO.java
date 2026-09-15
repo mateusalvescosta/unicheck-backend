@@ -17,10 +17,8 @@ import com.unicheck.usuario.enumeration.StatusMatricula;
 public record AlunoResponseDTO(
         Long id,
         UsuarioResponseDTO usuario,
-        Long cursoId,
-        String ra,
         StatusMatricula status,
         String periodo,
-        Integer xptotal
+        Integer xpTotal
 ) {
 }
