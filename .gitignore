@@ -37,6 +37,7 @@ build/
 
 application.properties
 
+AGENTS.md
 *docs/
 *specify/
 *specs
