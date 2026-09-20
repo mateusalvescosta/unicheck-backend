@@ -29,10 +29,7 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.NOT_FOUND, "Recurso nao encontrado", ex.getMessage(), request);
     }
 
-    /**
-     * Mesmo 404 da ResourceNotFoundException, para os dominios que preferem a
-     * excecao ja definida pela JPA em vez de uma propria.
-     */
+    /** Mesmo 404 da ResourceNotFoundException, para quem prefere a excecao ja definida pela JPA. */
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ProblemDetail> entityNotFound(EntityNotFoundException ex, HttpServletRequest request) {
         return response(HttpStatus.NOT_FOUND, "Recurso nao encontrado", ex.getMessage(), request);
@@ -60,34 +57,15 @@ public class GlobalExceptionHandler {
     /** Sort apontando para propriedade que nao existe, como ?sort=string, e erro do cliente e nao 500. */
     @ExceptionHandler(PropertyReferenceException.class)
     public ResponseEntity<ProblemDetail> sortInvalido(PropertyReferenceException ex, HttpServletRequest request) {
-        ProblemDetail problem = base(HttpStatus.BAD_REQUEST, "Parametro invalido",
-                "Nao e possivel ordenar por '" + ex.getPropertyName() + "'.", request);
-        problem.setProperty("parameter", "sort");
-        return ResponseEntity.badRequest().body(problem);
+        return sortInvalido("'" + ex.getPropertyName() + "'", request);
     }
 
-    /** O mesmo sort invalido chega embrulhado quando a consulta e um @Query, e nao como PropertyReferenceException. */
+    /** O mesmo sort invalido chega embrulhado em duas camadas quando a consulta e um @Query. */
     @ExceptionHandler(InvalidDataAccessApiUsageException.class)
     public ResponseEntity<ProblemDetail> sortInvalidoEmQuery(InvalidDataAccessApiUsageException ex, HttpServletRequest request) {
-        // O Hibernate ainda embrulha a UnknownPathException em IllegalArgumentException antes de o Spring converter,
-        // entao nao basta olhar a causa direta. O limite de profundidade encerra o laco mesmo que a
-        // cadeia de causas seja ciclica, o que comparar apenas a causa imediata nao garante.
-        boolean propriedadeInexistente = false;
-        Throwable causa = ex;
-        for (int nivel = 0; causa != null && nivel < 10; nivel++, causa = causa.getCause()) {
-            if (causa instanceof UnknownPathException) {
-                propriedadeInexistente = true;
-                break;
-            }
-        }
-        if (!propriedadeInexistente) {
-            return response(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno",
-                    "Ocorreu um erro inesperado. Tente novamente mais tarde.", request);
-        }
-        ProblemDetail problem = base(HttpStatus.BAD_REQUEST, "Parametro invalido",
-                "Nao e possivel ordenar pela propriedade informada.", request);
-        problem.setProperty("parameter", "sort");
-        return ResponseEntity.badRequest().body(problem);
+        return ex.contains(UnknownPathException.class)
+                ? sortInvalido("essa propriedade", request)
+                : response(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno", "Ocorreu um erro inesperado. Tente novamente mais tarde.", request);
     }
 
     /** Nunca diferencia RA inexistente de senha errada para evitar enumeracao de usuarios. */
@@ -108,16 +86,19 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.CONFLICT, "Conflito de dados", ex.getMessage(), request);
     }
 
-    /**
-     * Constraint do banco, que ainda pode vencer uma verificacao concorrente da Service.
-     * A mensagem original cita tabela e constraint, entao nao serve ao cliente e e substituida.
-     */
+    /** Constraint do banco: a mensagem original cita tabela e constraint, entao nao vai ao cliente. */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ProblemDetail> violacaoDeIntegridade(DataIntegrityViolationException ex, HttpServletRequest request) {
         return response(HttpStatus.CONFLICT, "Conflito de dados",
                 "A operacao conflita com dados ja existentes ou ainda referenciados.", request);
     }
 
+    private ResponseEntity<ProblemDetail> sortInvalido(String propriedade, HttpServletRequest request) {
+        ProblemDetail problem = base(HttpStatus.BAD_REQUEST, "Parametro invalido",
+                "Nao e possivel ordenar por " + propriedade + ".", request);
+        problem.setProperty("parameter", "sort");
+        return ResponseEntity.badRequest().body(problem);
+    }
     private ResponseEntity<ProblemDetail> response(HttpStatus status, String title, String detail, HttpServletRequest request) {
         return ResponseEntity.status(status).body(base(status, title, detail, request));
     }

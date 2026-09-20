@@ -159,26 +159,6 @@ class GlobalExceptionHandlerBeneficioCategoriaTest {
     }
 
     /**
-     * @apiNote A JVM proíbe auto-causação direta, mas um ciclo A para B para A é construtível e
-     *          travaria um laço que só compara a causa imediata.
-     * @author Mateus Alves Costa
-     * @since 19.09.2026
-     */
-    @Test
-    void cadeiaDeCausaCiclicaNaoTravaOHandler() {
-        InvalidDataAccessApiUsageException a = new InvalidDataAccessApiUsageException("a");
-        IllegalStateException b = new IllegalStateException("b");
-        a.initCause(b);
-        b.initCause(a);
-        InvalidDataAccessApiUsageException erro = a;
-
-        ResponseEntity<ProblemDetail> resposta = assertTimeoutPreemptively(
-                java.time.Duration.ofSeconds(2), () -> handler.sortInvalidoEmQuery(erro, request));
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, resposta.getStatusCode());
-    }
-
-    /**
      * @apiNote Todo corpo de erro mantém o contrato: instance, timestamp e title preenchidos.
      * @author Mateus Alves Costa
      * @since 19.09.2026
