@@ -8,8 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -56,7 +54,7 @@ class FavoritoControllerSecurityTest {
      */
     @Test @WithMockUser(roles = "ADMIN")
     void adminNaoListaFavoritos() {
-        assertThrows(AccessDeniedException.class, () -> controller.listar(jwt("ADMIN0001"), pageable()));
+        assertThrows(AccessDeniedException.class, () -> controller.listar(jwt("ADMIN0001"), 0, 12));
         verify(service, never()).listarFavoritos(any(), any());
     }
 
@@ -100,7 +98,7 @@ class FavoritoControllerSecurityTest {
      */
     @Test @WithMockUser(roles = "ALUNO")
     void alunoListaFavoritaEDesfavorita() {
-        assertEquals(200, controller.listar(jwt("RA001"), pageable()).getStatusCode().value());
+        assertEquals(200, controller.listar(jwt("RA001"), 0, 12).getStatusCode().value());
         assertEquals(204, controller.favoritar(1L, jwt("RA001")).getStatusCode().value());
         assertEquals(204, controller.desfavoritar(1L, jwt("RA001")).getStatusCode().value());
     }
@@ -129,16 +127,6 @@ class FavoritoControllerSecurityTest {
     private Jwt jwt(String subject) {
         return Jwt.withTokenValue("token").header("alg", "HS256").subject(subject)
                 .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(3600)).build();
-    }
-
-    /**
-     * @apiNote Monta a paginação padrão dos favoritos, do mais recente para o mais antigo.
-     * @return --> Retorna a paginação montada.
-     * @author Mateus Alves Costa
-     * @since 19.09.2026
-     */
-    private PageRequest pageable() {
-        return PageRequest.of(0, 12, Sort.by(Sort.Direction.DESC, "favoritadoEm"));
     }
 
     @Configuration(proxyBeanMethods = false)

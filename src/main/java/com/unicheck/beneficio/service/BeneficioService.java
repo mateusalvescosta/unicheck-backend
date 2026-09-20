@@ -7,7 +7,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,8 +61,7 @@ public class BeneficioService {
      * @param categoriaId --> ID da categoria, ou null para não filtrar.
      * @param ra          --> RA do usuário autenticado; se não for um aluno, nenhum
      *                    benefício vem marcado como favorito.
-     * @param pageable    --> Configuração de paginação; a ordenação é fixa por nome
-     *                    e o sort recebido é descartado.
+     * @param pageable    --> Página e tamanho; a ordenação é fixa na consulta.
      * @return --> Retorna uma página com os benefícios que atendem aos filtros.
      * @author Mateus Alves Costa
      * @since 18.08.2026
@@ -74,12 +72,8 @@ public class BeneficioService {
             Pageable pageable) {
         String padrao = termo == null || termo.isBlank() ? null : "%" + termo.trim().toLowerCase() + "%";
 
-        // A consulta ja traz o ORDER BY proprio, entao o sort da URL e descartado: repassa-lo
-        // faria o Spring Data concatenar o nome recebido no SQL nativo sem validar se a coluna existe.
-        Pageable semSort = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
-
         Page<Beneficio> pagina = beneficioRepository.buscar(padrao, tipo == null ? null : tipo.name(),
-                categoriaId, semSort);
+                categoriaId, pageable);
 
         Long alunoId = alunoRepository.findByUsuario_Ra(ra).map(Aluno::getId).orElse(null);
 
@@ -134,52 +128,16 @@ public class BeneficioService {
         beneficio.setUrl(dto.url().trim());
         beneficio.setTipo(dto.tipo());
         beneficio.setPublicoElegivel(dto.publicoElegivel().trim());
-        beneficio.setIconeUrl(dto.iconeUrl() == null || dto.iconeUrl().isBlank()
-                ? null : dto.iconeUrl().trim());
-        beneficio.setObservacaoElegibilidade(dto.observacaoElegibilidade() == null || dto.observacaoElegibilidade().isBlank()
-                ? null : dto.observacaoElegibilidade().trim());
-        beneficio.setAvisoImportante(dto.avisoImportante() == null || dto.avisoImportante().isBlank()
-                ? null : dto.avisoImportante().trim());
-        beneficio.setDisponibilidade(dto.disponibilidade() == null || dto.disponibilidade().isBlank()
-                ? null : dto.disponibilidade().trim());
+        beneficio.setIconeUrl(opcional(dto.iconeUrl()));
+        beneficio.setObservacaoElegibilidade(opcional(dto.observacaoElegibilidade()));
+        beneficio.setAvisoImportante(opcional(dto.avisoImportante()));
+        beneficio.setDisponibilidade(opcional(dto.disponibilidade()));
 
-        if(dto.categoriaIds() != null && !dto.categoriaIds().isEmpty()) {
-            List<Categoria> categorias = categoriaRepository.findAllById(dto.categoriaIds());
+        substituirCategorias(beneficio, dto.categoriaIds());
+        substituirPalavrasChave(beneficio, dto.palavrasChave());
+        substituirPassos(beneficio, dto.passos());
 
-            if(categorias.size() != dto.categoriaIds().size()) {
-                Set<Long> encontradas = categorias.stream().map(Categoria::getId).collect(Collectors.toSet());
-                String faltando = dto.categoriaIds().stream().filter(categoriaId -> !encontradas.contains(categoriaId))
-                        .map(String::valueOf).collect(Collectors.joining(", "));
-                throw new EntityNotFoundException("Categoria não encontrada com id: " + faltando);
-            }
-
-            String desativadas = categorias.stream().filter(categoria -> !categoria.isAtivo())
-                    .map(Categoria::getNome).sorted().collect(Collectors.joining(", "));
-            if(!desativadas.isEmpty()) {
-                throw new ResourceConflictException(
-                        "Não é possível cadastrar um benefício com categoria desativada: " + desativadas + ".");
-            }
-
-            beneficio.getCategorias().addAll(categorias);
-        }
-
-        if(dto.palavrasChave() != null) {
-            dto.palavrasChave().stream()
-                    .filter(palavra -> palavra != null && !palavra.isBlank())
-                    .map(String::trim)
-                    .forEach(beneficio.getPalavrasChave()::add);
-        }
-
-        if(dto.passos() != null) {
-            dto.passos().stream()
-                    .filter(Objects::nonNull)
-                    .sorted(Comparator.comparing(PassoBeneficioDTO::ordem))
-                    .map(passo -> new PassoBeneficio(passo.ordem(), passo.titulo(), passo.descricao()))
-                    .forEach(beneficio.getPassos()::add);
-        }
-
-        beneficio = beneficioRepository.save(beneficio);
-        return toDto(beneficio);
+        return toDto(beneficioRepository.save(beneficio));
     }
 
     /**
@@ -205,72 +163,26 @@ public class BeneficioService {
         Beneficio beneficio = beneficioRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Benefício não encontrado com id: " + id));
 
-        if(dto.nome() != null && !dto.nome().isBlank()
-                && beneficioRepository.existsByNomeIgnoreCaseAndIdNot(dto.nome().trim(), id)) {
+        if(preenchido(dto.nome()) && beneficioRepository.existsByNomeIgnoreCaseAndIdNot(dto.nome().trim(), id)) {
             throw new ResourceConflictException("Já existe um benefício com o nome '" + dto.nome().trim() + "'.");
         }
 
-        if(dto.nome() != null && !dto.nome().isBlank()) beneficio.setNome(dto.nome().trim());
-        if(dto.chamada() != null && !dto.chamada().isBlank()) beneficio.setChamada(dto.chamada().trim());
-        if(dto.descricao() != null && !dto.descricao().isBlank()) beneficio.setDescricao(dto.descricao().trim());
-        if(dto.url() != null && !dto.url().isBlank()) beneficio.setUrl(dto.url().trim());
-        if(dto.publicoElegivel() != null && !dto.publicoElegivel().isBlank()) beneficio.setPublicoElegivel(dto.publicoElegivel().trim());
+        if(preenchido(dto.nome())) beneficio.setNome(dto.nome().trim());
+        if(preenchido(dto.chamada())) beneficio.setChamada(dto.chamada().trim());
+        if(preenchido(dto.descricao())) beneficio.setDescricao(dto.descricao().trim());
+        if(preenchido(dto.url())) beneficio.setUrl(dto.url().trim());
+        if(preenchido(dto.publicoElegivel())) beneficio.setPublicoElegivel(dto.publicoElegivel().trim());
         if(dto.tipo() != null) beneficio.setTipo(dto.tipo());
-        if(dto.iconeUrl() != null) beneficio.setIconeUrl(dto.iconeUrl().isBlank() ? null : dto.iconeUrl().trim());
-        if(dto.observacaoElegibilidade() != null) beneficio.setObservacaoElegibilidade(dto.observacaoElegibilidade().isBlank() ? null : dto.observacaoElegibilidade().trim());
-        if(dto.avisoImportante() != null) beneficio.setAvisoImportante(dto.avisoImportante().isBlank() ? null : dto.avisoImportante().trim());
-        if(dto.disponibilidade() != null) beneficio.setDisponibilidade(dto.disponibilidade().isBlank() ? null : dto.disponibilidade().trim());
+        if(dto.iconeUrl() != null) beneficio.setIconeUrl(opcional(dto.iconeUrl()));
+        if(dto.observacaoElegibilidade() != null) beneficio.setObservacaoElegibilidade(opcional(dto.observacaoElegibilidade()));
+        if(dto.avisoImportante() != null) beneficio.setAvisoImportante(opcional(dto.avisoImportante()));
+        if(dto.disponibilidade() != null) beneficio.setDisponibilidade(opcional(dto.disponibilidade()));
 
-        if(dto.categoriaIds() != null) {
-            if(dto.categoriaIds().isEmpty()) {
-                beneficio.getCategorias().clear();
-            } else {
-                List<Categoria> categorias = categoriaRepository.findAllById(dto.categoriaIds());
+        substituirCategorias(beneficio, dto.categoriaIds());
+        substituirPalavrasChave(beneficio, dto.palavrasChave());
+        substituirPassos(beneficio, dto.passos());
 
-                if(categorias.size() != dto.categoriaIds().size()) {
-                    Set<Long> encontradas = categorias.stream().map(Categoria::getId).collect(Collectors.toSet());
-                    String faltando = dto.categoriaIds().stream().filter(categoriaId -> !encontradas.contains(categoriaId))
-                            .map(String::valueOf).collect(Collectors.joining(", "));
-                    throw new EntityNotFoundException("Categoria não encontrada com id: " + faltando);
-                }
-
-                // Uma categoria desativada que o beneficio ja tinha pode ficar: desativar nao
-                // desfaz vinculo existente. O que a edicao nao pode e acrescentar uma nova.
-                // O conjunto atual e lido antes do clear, senao nao haveria com o que comparar.
-                Set<Long> jaVinculadas = beneficio.getCategorias().stream().map(Categoria::getId)
-                        .collect(Collectors.toSet());
-                String novasDesativadas = categorias.stream()
-                        .filter(categoria -> !categoria.isAtivo() && !jaVinculadas.contains(categoria.getId()))
-                        .map(Categoria::getNome).sorted().collect(Collectors.joining(", "));
-                if(!novasDesativadas.isEmpty()) {
-                    throw new ResourceConflictException(
-                            "Não é possível adicionar categoria desativada ao benefício: " + novasDesativadas + ".");
-                }
-
-                beneficio.getCategorias().clear();
-                beneficio.getCategorias().addAll(categorias);
-            }
-        }
-
-        if(dto.palavrasChave() != null) {
-            beneficio.getPalavrasChave().clear();
-            dto.palavrasChave().stream()
-                    .filter(palavra -> palavra != null && !palavra.isBlank())
-                    .map(String::trim)
-                    .forEach(beneficio.getPalavrasChave()::add);
-        }
-
-        if(dto.passos() != null) {
-            beneficio.getPassos().clear();
-            dto.passos().stream()
-                    .filter(Objects::nonNull)
-                    .sorted(Comparator.comparing(PassoBeneficioDTO::ordem))
-                    .map(passo -> new PassoBeneficio(passo.ordem(), passo.titulo(), passo.descricao()))
-                    .forEach(beneficio.getPassos()::add);
-        }
-
-        beneficio = beneficioRepository.save(beneficio);
-        return toDto(beneficio);
+        return toDto(beneficioRepository.save(beneficio));
     }
 
     /**
@@ -336,8 +248,7 @@ public class BeneficioService {
      * @apiNote Lista os benefícios favoritados pelo aluno. Todos vêm com favorito
      *          igual a true, já que a própria lista é o recorte dos favoritos.
      * @param ra       --> RA do aluno autenticado.
-     * @param pageable --> Configuração de paginação; a ordenação é fixa na consulta
-     *                 e o sort recebido é descartado.
+     * @param pageable --> Página e tamanho; a ordenação é fixa na consulta.
      * @return --> Retorna uma página com os benefícios favoritados.
      * @throws EntityNotFoundException --> Lançada caso o aluno não seja
      *                                   encontrado.
@@ -348,11 +259,98 @@ public class BeneficioService {
     public Page<BeneficioSummaryDTO> listarFavoritos(String ra, Pageable pageable) {
         Aluno aluno = identidadeService.alunoPorRa(ra);
 
-        // A consulta ja traz o ORDER BY proprio, entao o sort da URL e descartado, igual ao buscar.
-        Pageable semSort = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
-
-        return favoritoRepository.findBeneficiosPorAluno(aluno.getId(), semSort)
+        return favoritoRepository.findBeneficiosPorAluno(aluno.getId(), pageable)
                 .map(beneficio -> toDto(beneficio, true));
+    }
+
+    /**
+     * @apiNote Campo opcional: ausente e vazio significam a mesma coisa, entao ambos viram null.
+     * @param valor --> Texto recebido no corpo da requisicao.
+     * @return --> Retorna o texto sem espacos nas pontas, ou null se nao houver conteudo.
+     * @author Mateus Alves Costa
+     * @since 20.09.2026
+     */
+    private static String opcional(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
+    }
+
+    /**
+     * @apiNote Campo obrigatorio na atualizacao: so vale mexer se veio com conteudo.
+     * @param valor --> Texto recebido no corpo da requisicao.
+     * @return --> Retorna true quando o campo foi informado e nao esta em branco.
+     * @author Mateus Alves Costa
+     * @since 20.09.2026
+     */
+    private static boolean preenchido(String valor) {
+        return valor != null && !valor.isBlank();
+    }
+
+    /**
+     * @apiNote Substitui as categorias do beneficio pelas dos ids informados.
+     *
+     *          Uma categoria desativada que o beneficio ja tinha pode permanecer, porque
+     *          desativar nao desfaz vinculo existente. O que nao se pode e acrescentar uma
+     *          desativada nova, por isso o conjunto atual e lido antes da troca.
+     * @param beneficio --> Beneficio a ter as categorias substituidas.
+     * @param ids       --> IDs das categorias, ou null para nao mexer no vinculo.
+     * @throws EntityNotFoundException   --> Lancada caso algum id nao exista.
+     * @throws ResourceConflictException --> Lancada caso a troca acrescente categoria desativada.
+     * @author Mateus Alves Costa
+     * @since 20.09.2026
+     */
+    private void substituirCategorias(Beneficio beneficio, Set<Long> ids) {
+        if(ids == null) return;
+
+        Set<Long> jaVinculadas = beneficio.getCategorias().stream().map(Categoria::getId)
+                .collect(Collectors.toSet());
+        List<Categoria> categorias = categoriaRepository.findAllById(ids);
+
+        if(categorias.size() != ids.size()) {
+            Set<Long> encontradas = categorias.stream().map(Categoria::getId).collect(Collectors.toSet());
+            throw new EntityNotFoundException("Categoria não encontrada com id: " + ids.stream()
+                    .filter(id -> !encontradas.contains(id)).map(String::valueOf).collect(Collectors.joining(", ")));
+        }
+
+        String desativadas = categorias.stream()
+                .filter(categoria -> !categoria.isAtivo() && !jaVinculadas.contains(categoria.getId()))
+                .map(Categoria::getNome).sorted().collect(Collectors.joining(", "));
+        if(!desativadas.isEmpty()) {
+            throw new ResourceConflictException("Não é possível vincular categoria desativada: " + desativadas + ".");
+        }
+
+        beneficio.getCategorias().clear();
+        beneficio.getCategorias().addAll(categorias);
+    }
+
+    /**
+     * @apiNote Substitui as palavras-chave do beneficio, descartando as vazias.
+     * @param beneficio --> Beneficio a ter as palavras-chave substituidas.
+     * @param palavras  --> Palavras recebidas, ou null para nao mexer.
+     * @author Mateus Alves Costa
+     * @since 20.09.2026
+     */
+    private void substituirPalavrasChave(Beneficio beneficio, Set<String> palavras) {
+        if(palavras == null) return;
+
+        beneficio.getPalavrasChave().clear();
+        palavras.stream().filter(BeneficioService::preenchido).map(String::trim)
+                .forEach(beneficio.getPalavrasChave()::add);
+    }
+
+    /**
+     * @apiNote Substitui os passos do beneficio, ja na ordem em que a tela os numera.
+     * @param beneficio --> Beneficio a ter os passos substituidos.
+     * @param passos    --> Passos recebidos, ou null para nao mexer.
+     * @author Mateus Alves Costa
+     * @since 20.09.2026
+     */
+    private void substituirPassos(Beneficio beneficio, List<PassoBeneficioDTO> passos) {
+        if(passos == null) return;
+
+        beneficio.getPassos().clear();
+        passos.stream().filter(Objects::nonNull).sorted(Comparator.comparing(PassoBeneficioDTO::ordem))
+                .map(passo -> new PassoBeneficio(passo.ordem(), passo.titulo(), passo.descricao()))
+                .forEach(beneficio.getPassos()::add);
     }
 
     /**

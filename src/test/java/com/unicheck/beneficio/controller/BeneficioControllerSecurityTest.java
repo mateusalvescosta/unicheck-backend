@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
@@ -108,7 +107,7 @@ class BeneficioControllerSecurityTest {
      */
     @Test @WithMockUser(roles = "ALUNO")
     void alunoListaEAbreBeneficio() {
-        assertEquals(200, controller.buscar(null, null, null, jwt("RA001"), PageRequest.of(0, 12))
+        assertEquals(200, controller.buscar(null, null, null, jwt("RA001"), 0, 12)
                 .getStatusCode().value());
         assertEquals(200, controller.findById(1L).getStatusCode().value());
         assertEquals(200, controller.listarTipos().getStatusCode().value());
@@ -133,7 +132,7 @@ class BeneficioControllerSecurityTest {
      */
     @Test @WithMockUser(roles = "ADMIN")
     void adminTambemLe() {
-        assertEquals(200, controller.buscar(null, null, null, jwt("ADMIN0001"), PageRequest.of(0, 12))
+        assertEquals(200, controller.buscar(null, null, null, jwt("ADMIN0001"), 0, 12)
                 .getStatusCode().value());
     }
 
@@ -156,7 +155,7 @@ class BeneficioControllerSecurityTest {
      */
     @Test @WithMockUser(roles = "ALUNO")
     void buscarRepassaOsFiltrosRecebidosParaAService() {
-        controller.buscar("bolsa", TipoBeneficio.GRATUITO, 3L, jwt("RA001"), PageRequest.of(1, 5));
+        controller.buscar("bolsa", TipoBeneficio.GRATUITO, 3L, jwt("RA001"), 1, 5);
 
         verify(service).buscar(eq("bolsa"), eq(TipoBeneficio.GRATUITO), eq(3L), eq("RA001"), any());
     }

@@ -5,8 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -49,8 +48,8 @@ public class BeneficioController {
      * @param categoriaId --> ID da categoria, ou ausente para não filtrar.
      * @param jwt         --> Token do usuário autenticado, usado para marcar os
      *                    favoritos do aluno.
-     * @param pageable    --> Configuração de paginação; a ordenação é fixa por nome
-     *                    e o parâmetro sort é ignorado.
+     * @param page        --> Página desejada, começando em zero.
+     * @param size        --> Quantidade de itens por página.
      * @return --> Retorna 200 com uma página dos benefícios encontrados.
      * @author Mateus Alves Costa
      * @since 18.08.2026
@@ -62,8 +61,9 @@ public class BeneficioController {
             @RequestParam(required = false) TipoBeneficio tipo,
             @RequestParam(required = false) Long categoriaId,
             @AuthenticationPrincipal Jwt jwt,
-            @PageableDefault(size = 12) Pageable pageable) {
-        return ResponseEntity.ok(service.buscar(q, tipo, categoriaId, jwt.getSubject(), pageable));
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+        return ResponseEntity.ok(service.buscar(q, tipo, categoriaId, jwt.getSubject(), PageRequest.of(page, size)));
     }
 
     /**

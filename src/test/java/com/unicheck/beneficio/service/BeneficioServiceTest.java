@@ -88,27 +88,6 @@ class BeneficioServiceTest {
     }
 
     /**
-     * @apiNote O sort da URL é descartado e só página e tamanho seguem adiante. Repassá-lo faria
-     *          o Spring Data concatenar o nome recebido no SQL nativo sem validar a coluna.
-     * @author Mateus Alves Costa
-     * @since 19.09.2026
-     */
-    @Test
-    void buscarDescartaOSortRecebidoPorqueAOrdenacaoEstaNoSql() {
-        when(beneficioRepository.buscar(any(), any(), any(), any())).thenReturn(Page.empty());
-        when(alunoRepository.findByUsuario_Ra("RA001")).thenReturn(Optional.empty());
-
-        service.buscar(null, null, null, "RA001",
-                PageRequest.of(2, 5, Sort.by("propriedadeQueNaoExiste")));
-
-        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
-        verify(beneficioRepository).buscar(any(), any(), any(), captor.capture());
-        assertTrue(captor.getValue().getSort().isUnsorted());
-        assertEquals(2, captor.getValue().getPageNumber());
-        assertEquals(5, captor.getValue().getPageSize());
-    }
-
-    /**
      * @apiNote O favorito não sai da entidade: é resolvido para a página inteira numa consulta só.
      * @author Mateus Alves Costa
      * @since 19.09.2026
@@ -228,7 +207,7 @@ class BeneficioServiceTest {
         ResourceConflictException erro = assertThrows(ResourceConflictException.class,
                 () -> service.create(request("Bolsa", Set.of(5L))));
 
-        assertEquals("Não é possível cadastrar um benefício com categoria desativada: Antiga.", erro.getMessage());
+        assertEquals("Não é possível vincular categoria desativada: Antiga.", erro.getMessage());
         verify(beneficioRepository, never()).save(any());
     }
 
@@ -322,12 +301,12 @@ class BeneficioServiceTest {
         ResourceConflictException erro = assertThrows(ResourceConflictException.class,
                 () -> service.update(1L, request(null, Set.of(9L))));
 
-        assertEquals("Não é possível adicionar categoria desativada ao benefício: Antiga.", erro.getMessage());
+        assertEquals("Não é possível vincular categoria desativada: Antiga.", erro.getMessage());
         verify(beneficioRepository, never()).save(any());
     }
 
     /**
-     * @apiNote Lista vazia desvincula tudo sem precisar consultar categorias.
+     * @apiNote Lista vazia desvincula todas as categorias do benefício.
      * @author Mateus Alves Costa
      * @since 19.09.2026
      */
@@ -341,7 +320,6 @@ class BeneficioServiceTest {
         BeneficioResponseDTO retorno = service.update(1L, request(null, Set.of()));
 
         assertTrue(retorno.categorias().isEmpty());
-        verify(categoriaRepository, never()).findAllById(any());
     }
 
     /**
@@ -458,26 +436,6 @@ class BeneficioServiceTest {
 
         assertTrue(retorno.getContent().stream().allMatch(BeneficioSummaryDTO::favorito));
         verify(favoritoRepository, never()).findBeneficioIdsFavoritados(any(), any());
-    }
-
-    /**
-     * @apiNote O sort da URL tambem e descartado nos favoritos: a ordem vive na consulta,
-     *          e repassar o nome recebido fazia o Spring Data montar um ORDER BY invalido.
-     * @author Mateus Alves Costa
-     * @since 20.09.2026
-     */
-    @Test
-    void listarFavoritosDescartaOSortRecebido() {
-        when(identidadeService.alunoPorRa("RA001")).thenReturn(aluno(10L));
-        when(favoritoRepository.findBeneficiosPorAluno(eq(10L), any())).thenReturn(Page.empty());
-
-        service.listarFavoritos("RA001", PageRequest.of(1, 4, Sort.by("propriedadeQueNaoExiste")));
-
-        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
-        verify(favoritoRepository).findBeneficiosPorAluno(eq(10L), captor.capture());
-        assertTrue(captor.getValue().getSort().isUnsorted());
-        assertEquals(1, captor.getValue().getPageNumber());
-        assertEquals(4, captor.getValue().getPageSize());
     }
 
     /**
