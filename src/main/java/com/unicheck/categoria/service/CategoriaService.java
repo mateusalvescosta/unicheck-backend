@@ -2,7 +2,6 @@ package com.unicheck.categoria.service;
 
 import java.util.List;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,6 +9,7 @@ import com.unicheck.categoria.domain.Categoria;
 import com.unicheck.categoria.dto.CategoriaRequestDTO;
 import com.unicheck.categoria.dto.CategoriaResponseDTO;
 import com.unicheck.categoria.repository.CategoriaRepository;
+import com.unicheck.exception.ResourceConflictException;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -72,7 +72,7 @@ public class CategoriaService {
      * @apiNote Cria uma nova categoria, já ativa.
      * @param dto --> Dados para criação da categoria.
      * @return --> Retorna os dados da categoria criada.
-     * @throws DataIntegrityViolationException --> Lançada caso o nome fornecido já esteja
+     * @throws ResourceConflictException --> Lançada caso o nome fornecido já esteja
      *                                   cadastrado.
      * @author Mateus Alves Costa
      * @since 18.08.2026
@@ -80,7 +80,7 @@ public class CategoriaService {
     @Transactional
     public CategoriaResponseDTO create(CategoriaRequestDTO dto) {
         if(repository.existsByNomeIgnoreCase(dto.nome())) {
-            throw new DataIntegrityViolationException("Já existe uma categoria com o nome '" + dto.nome().trim() + "'.");
+            throw new ResourceConflictException("Já existe uma categoria com o nome '" + dto.nome().trim() + "'.");
         }
 
         Categoria categoria = new Categoria();
@@ -97,7 +97,7 @@ public class CategoriaService {
      * @return --> Retorna os dados da categoria atualizada.
      * @throws EntityNotFoundException --> Lançada caso a categoria com o ID
      *                                   fornecido não seja encontrada.
-     * @throws DataIntegrityViolationException --> Lançada caso o nome fornecido já esteja
+     * @throws ResourceConflictException --> Lançada caso o nome fornecido já esteja
      *                                   cadastrado em outra categoria.
      * @author Mateus Alves Costa
      * @since 18.08.2026
@@ -108,7 +108,7 @@ public class CategoriaService {
                 .orElseThrow(() -> new EntityNotFoundException("Categoria não encontrada com id: " + id));
 
         if(repository.existsByNomeIgnoreCaseAndIdNot(dto.nome(), id)) {
-            throw new DataIntegrityViolationException("Já existe outra categoria com o nome '" + dto.nome().trim() + "'.");
+            throw new ResourceConflictException("Já existe outra categoria com o nome '" + dto.nome().trim() + "'.");
         }
 
         categoria.setNome(dto.nome().trim());
@@ -123,7 +123,7 @@ public class CategoriaService {
      * @return --> Retorna os dados da categoria já ativa.
      * @throws EntityNotFoundException --> Lançada caso a categoria com o ID
      *                                   fornecido não seja encontrada.
-     * @throws DataIntegrityViolationException --> Lançada caso a categoria já esteja
+     * @throws ResourceConflictException --> Lançada caso a categoria já esteja
      *                                   ativa.
      * @author Mateus Alves Costa
      * @since 19.09.2026
@@ -134,7 +134,7 @@ public class CategoriaService {
                 .orElseThrow(() -> new EntityNotFoundException("Categoria não encontrada com id: " + id));
 
         if(categoria.isAtivo()) {
-            throw new DataIntegrityViolationException("A categoria '" + categoria.getNome() + "' já está ativa.");
+            throw new ResourceConflictException("A categoria '" + categoria.getNome() + "' já está ativa.");
         }
 
         categoria.setAtivo(true);
@@ -150,7 +150,7 @@ public class CategoriaService {
      * @return --> Retorna os dados da categoria já desativada.
      * @throws EntityNotFoundException --> Lançada caso a categoria com o ID
      *                                   fornecido não seja encontrada.
-     * @throws DataIntegrityViolationException --> Lançada caso a categoria já esteja
+     * @throws ResourceConflictException --> Lançada caso a categoria já esteja
      *                                   desativada.
      * @author Mateus Alves Costa
      * @since 19.09.2026
@@ -161,7 +161,7 @@ public class CategoriaService {
                 .orElseThrow(() -> new EntityNotFoundException("Categoria não encontrada com id: " + id));
 
         if(!categoria.isAtivo()) {
-            throw new DataIntegrityViolationException("A categoria '" + categoria.getNome() + "' já está desativada.");
+            throw new ResourceConflictException("A categoria '" + categoria.getNome() + "' já está desativada.");
         }
 
         // Os beneficios que ja usam a categoria nao sao tocados: desativar so tira ela da
@@ -178,7 +178,7 @@ public class CategoriaService {
      * @param id --> ID da categoria a ser removida.
      * @throws EntityNotFoundException        --> Lançada caso a categoria com o ID
      *                                          fornecido não seja encontrada.
-     * @throws DataIntegrityViolationException --> Lançada caso a categoria ainda
+     * @throws ResourceConflictException --> Lançada caso a categoria ainda
      *                                          esteja vinculada a algum benefício.
      * @author Mateus Alves Costa
      * @since 18.08.2026

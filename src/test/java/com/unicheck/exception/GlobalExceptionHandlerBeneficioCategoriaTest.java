@@ -64,7 +64,7 @@ class GlobalExceptionHandlerBeneficioCategoriaTest {
     @Test
     void conflitoLancadoPelaServiceMantemAMensagemEspecifica() {
         ResponseEntity<ProblemDetail> resposta = handler.conflict(
-                new DataIntegrityViolationException("Já existe um benefício com o nome 'Bolsa'."), request);
+                new ResourceConflictException("Já existe um benefício com o nome 'Bolsa'."), request);
 
         assertEquals(HttpStatus.CONFLICT, resposta.getStatusCode());
         assertEquals("Já existe um benefício com o nome 'Bolsa'.", resposta.getBody().getDetail());
@@ -83,11 +83,12 @@ class GlobalExceptionHandlerBeneficioCategoriaTest {
                 new RuntimeException("ERROR: update or delete on table \"tb_categoria\" violates foreign key "
                         + "constraint \"tb_beneficio_categoria_categoria_id_fkey\""));
 
-        ResponseEntity<ProblemDetail> resposta = handler.conflict(doBanco, request);
+        ResponseEntity<ProblemDetail> resposta = handler.violacaoDeIntegridade(doBanco, request);
 
         assertEquals(HttpStatus.CONFLICT, resposta.getStatusCode());
-        assertEquals("RA ou email ja cadastrado, ou registro ainda referenciado.", resposta.getBody().getDetail());
+        assertEquals("A operacao conflita com dados ja existentes ou ainda referenciados.", resposta.getBody().getDetail());
         assertFalse(resposta.getBody().getDetail().contains("tb_categoria"));
+        assertFalse(resposta.getBody().getDetail().contains("RA"));
         assertFalse(resposta.getBody().getDetail().contains("foreign key"));
     }
 

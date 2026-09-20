@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +25,7 @@ import com.unicheck.beneficio.repository.BeneficioRepository;
 import com.unicheck.categoria.domain.Categoria;
 import com.unicheck.categoria.dto.CategoriaResponseDTO;
 import com.unicheck.categoria.repository.CategoriaRepository;
+import com.unicheck.exception.ResourceConflictException;
 import com.unicheck.usuario.domain.Aluno;
 import com.unicheck.usuario.repository.AlunoRepository;
 import com.unicheck.usuario.service.IdentidadeService;
@@ -112,7 +112,7 @@ public class BeneficioService {
      * @apiNote Cria um novo benefício.
      * @param dto --> Dados para criação do benefício.
      * @return --> Retorna os dados do benefício criado.
-     * @throws DataIntegrityViolationException --> Lançada caso o nome já esteja
+     * @throws ResourceConflictException --> Lançada caso o nome já esteja
      *                                   cadastrado, ou caso alguma das categorias
      *                                   informadas esteja desativada.
      * @throws EntityNotFoundException --> Lançada caso algum dos IDs de categoria
@@ -124,7 +124,7 @@ public class BeneficioService {
     @Transactional
     public BeneficioResponseDTO create(BeneficioRequestDTO dto) {
         if(beneficioRepository.existsByNomeIgnoreCase(dto.nome())) {
-            throw new DataIntegrityViolationException("Já existe um benefício com o nome '" + dto.nome().trim() + "'.");
+            throw new ResourceConflictException("Já existe um benefício com o nome '" + dto.nome().trim() + "'.");
         }
 
         Beneficio beneficio = new Beneficio();
@@ -156,7 +156,7 @@ public class BeneficioService {
             String desativadas = categorias.stream().filter(categoria -> !categoria.isAtivo())
                     .map(Categoria::getNome).sorted().collect(Collectors.joining(", "));
             if(!desativadas.isEmpty()) {
-                throw new DataIntegrityViolationException(
+                throw new ResourceConflictException(
                         "Não é possível cadastrar um benefício com categoria desativada: " + desativadas + ".");
             }
 
@@ -193,7 +193,7 @@ public class BeneficioService {
      * @throws EntityNotFoundException --> Lançada caso o benefício não exista, ou
      *                                   caso algum dos IDs de categoria informados
      *                                   não exista.
-     * @throws DataIntegrityViolationException --> Lançada caso o nome já esteja cadastrado
+     * @throws ResourceConflictException --> Lançada caso o nome já esteja cadastrado
      *                                   em outro benefício, ou caso a edição tente
      *                                   acrescentar categoria desativada.
      * @author Mateus Alves Costa
@@ -207,7 +207,7 @@ public class BeneficioService {
 
         if(dto.nome() != null && !dto.nome().isBlank()
                 && beneficioRepository.existsByNomeIgnoreCaseAndIdNot(dto.nome().trim(), id)) {
-            throw new DataIntegrityViolationException("Já existe um benefício com o nome '" + dto.nome().trim() + "'.");
+            throw new ResourceConflictException("Já existe um benefício com o nome '" + dto.nome().trim() + "'.");
         }
 
         if(dto.nome() != null && !dto.nome().isBlank()) beneficio.setNome(dto.nome().trim());
@@ -243,7 +243,7 @@ public class BeneficioService {
                         .filter(categoria -> !categoria.isAtivo() && !jaVinculadas.contains(categoria.getId()))
                         .map(Categoria::getNome).sorted().collect(Collectors.joining(", "));
                 if(!novasDesativadas.isEmpty()) {
-                    throw new DataIntegrityViolationException(
+                    throw new ResourceConflictException(
                             "Não é possível adicionar categoria desativada ao benefício: " + novasDesativadas + ".");
                 }
 

@@ -102,16 +102,20 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.FORBIDDEN, "Acesso negado", "Nao foi possivel concluir esta operacao.", request);
     }
 
-    @ExceptionHandler({ResourceConflictException.class, DataIntegrityViolationException.class})
-    public ResponseEntity<ProblemDetail> conflict(Exception ex, HttpServletRequest request) {
-        // A constraint do banco ainda pode vencer uma verificacao concorrente; ambos os caminhos devem responder 409.
-        //
-        // A DataIntegrityViolationException chega por dois caminhos: lancada pela Service, ja com a
-        // mensagem pronta e sem causa, ou vinda do driver, embrulhando o erro tecnico da constraint.
-        // So o segundo caso precisa de texto generico, porque a mensagem original nao serve ao cliente.
-        boolean mensagemPropria = ex instanceof ResourceConflictException || ex.getCause() == null;
-        String detail = mensagemPropria ? ex.getMessage() : "RA ou email ja cadastrado, ou registro ainda referenciado.";
-        return response(HttpStatus.CONFLICT, "Conflito de dados", detail, request);
+    /** Regra de negocio violada. A mensagem e escrita pela Service e vai inteira ao cliente. */
+    @ExceptionHandler(ResourceConflictException.class)
+    public ResponseEntity<ProblemDetail> conflict(ResourceConflictException ex, HttpServletRequest request) {
+        return response(HttpStatus.CONFLICT, "Conflito de dados", ex.getMessage(), request);
+    }
+
+    /**
+     * Constraint do banco, que ainda pode vencer uma verificacao concorrente da Service.
+     * A mensagem original cita tabela e constraint, entao nao serve ao cliente e e substituida.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ProblemDetail> violacaoDeIntegridade(DataIntegrityViolationException ex, HttpServletRequest request) {
+        return response(HttpStatus.CONFLICT, "Conflito de dados",
+                "A operacao conflita com dados ja existentes ou ainda referenciados.", request);
     }
 
     private ResponseEntity<ProblemDetail> response(HttpStatus status, String title, String detail, HttpServletRequest request) {

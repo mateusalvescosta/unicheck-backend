@@ -11,7 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
+import com.unicheck.exception.ResourceConflictException;
 
 import java.util.List;
 import java.util.Optional;
@@ -117,7 +117,7 @@ class CategoriaServiceTest {
     void createComNomeRepetidoCitaONomeNaMensagemENaoSalva() {
         when(repository.existsByNomeIgnoreCase("Transporte")).thenReturn(true);
 
-        DataIntegrityViolationException erro = assertThrows(DataIntegrityViolationException.class,
+        ResourceConflictException erro = assertThrows(ResourceConflictException.class,
                 () -> service.create(new CategoriaRequestDTO("Transporte")));
 
         assertEquals("Já existe uma categoria com o nome 'Transporte'.", erro.getMessage());
@@ -152,7 +152,7 @@ class CategoriaServiceTest {
         when(repository.findById(3L)).thenReturn(Optional.of(categoria(3L, "Antiga", true)));
         when(repository.existsByNomeIgnoreCaseAndIdNot("Transporte", 3L)).thenReturn(true);
 
-        DataIntegrityViolationException erro = assertThrows(DataIntegrityViolationException.class,
+        ResourceConflictException erro = assertThrows(ResourceConflictException.class,
                 () -> service.update(3L, new CategoriaRequestDTO("Transporte")));
 
         assertEquals("Já existe outra categoria com o nome 'Transporte'.", erro.getMessage());
@@ -188,7 +188,7 @@ class CategoriaServiceTest {
     void desativarDuasVezesEConflitoECitaONome() {
         when(repository.findById(1L)).thenReturn(Optional.of(categoria(1L, "Alimentacao", false)));
 
-        DataIntegrityViolationException erro = assertThrows(DataIntegrityViolationException.class,
+        ResourceConflictException erro = assertThrows(ResourceConflictException.class,
                 () -> service.desativar(1L));
 
         assertEquals("A categoria 'Alimentacao' já está desativada.", erro.getMessage());
@@ -219,7 +219,7 @@ class CategoriaServiceTest {
     void ativarOQueJaEstaAtivoEConflito() {
         when(repository.findById(1L)).thenReturn(Optional.of(categoria(1L, "Alimentacao", true)));
 
-        DataIntegrityViolationException erro = assertThrows(DataIntegrityViolationException.class,
+        ResourceConflictException erro = assertThrows(ResourceConflictException.class,
                 () -> service.ativar(1L));
 
         assertEquals("A categoria 'Alimentacao' já está ativa.", erro.getMessage());

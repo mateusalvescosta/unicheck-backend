@@ -22,7 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
+import com.unicheck.exception.ResourceConflictException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -225,7 +225,7 @@ class BeneficioServiceTest {
         when(beneficioRepository.existsByNomeIgnoreCase("Bolsa")).thenReturn(false);
         when(categoriaRepository.findAllById(Set.of(5L))).thenReturn(List.of(categoria(5L, "Antiga", false)));
 
-        DataIntegrityViolationException erro = assertThrows(DataIntegrityViolationException.class,
+        ResourceConflictException erro = assertThrows(ResourceConflictException.class,
                 () -> service.create(request("Bolsa", Set.of(5L))));
 
         assertEquals("Não é possível cadastrar um benefício com categoria desativada: Antiga.", erro.getMessage());
@@ -279,7 +279,7 @@ class BeneficioServiceTest {
     void createComNomeRepetidoNaoConsultaCategorias() {
         when(beneficioRepository.existsByNomeIgnoreCase("Bolsa")).thenReturn(true);
 
-        DataIntegrityViolationException erro = assertThrows(DataIntegrityViolationException.class,
+        ResourceConflictException erro = assertThrows(ResourceConflictException.class,
                 () -> service.create(request("Bolsa", Set.of(5L))));
 
         assertEquals("Já existe um benefício com o nome 'Bolsa'.", erro.getMessage());
@@ -319,7 +319,7 @@ class BeneficioServiceTest {
         when(categoriaRepository.findAllById(Set.of(9L)))
                 .thenReturn(List.of(categoria(9L, "Antiga", false)));
 
-        DataIntegrityViolationException erro = assertThrows(DataIntegrityViolationException.class,
+        ResourceConflictException erro = assertThrows(ResourceConflictException.class,
                 () -> service.update(1L, request(null, Set.of(9L))));
 
         assertEquals("Não é possível adicionar categoria desativada ao benefício: Antiga.", erro.getMessage());
