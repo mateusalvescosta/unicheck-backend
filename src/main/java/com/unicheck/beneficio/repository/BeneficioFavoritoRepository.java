@@ -45,8 +45,8 @@ public interface BeneficioFavoritoRepository extends JpaRepository<BeneficioFavo
      * @apiNote Lista paginada dos benefícios favoritados por um aluno, para a tela
      *          "Meus favoritos".
      * @param alunoId  --> ID do aluno dono dos favoritos.
-     * @param pageable --> Configuração de paginação; a ordenação aceita apenas
-     *                 propriedades de BeneficioFavorito, como "favoritadoEm".
+     * @param pageable --> Configuração de paginação, sem ordenação: a ordem é fixa
+     *                 na consulta, do favorito mais recente para o mais antigo.
      * @return --> Retorna uma página com os benefícios favoritados.
      * @author Mateus Alves Costa
      * @since 18.08.2026
@@ -55,6 +55,7 @@ public interface BeneficioFavoritoRepository extends JpaRepository<BeneficioFavo
             SELECT f.id.beneficio
             FROM BeneficioFavorito f
             WHERE f.id.aluno.id = :alunoId
+            ORDER BY f.favoritadoEm DESC
             """)
     Page<Beneficio> findBeneficiosPorAluno(@Param("alunoId") Long alunoId, Pageable pageable);
 

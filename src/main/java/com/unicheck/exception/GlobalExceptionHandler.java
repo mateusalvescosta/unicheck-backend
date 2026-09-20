@@ -2,9 +2,7 @@ package com.unicheck.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.core.PropertyReferenceException;
-import org.hibernate.query.sqm.UnknownPathException;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -57,15 +55,10 @@ public class GlobalExceptionHandler {
     /** Sort apontando para propriedade que nao existe, como ?sort=string, e erro do cliente e nao 500. */
     @ExceptionHandler(PropertyReferenceException.class)
     public ResponseEntity<ProblemDetail> sortInvalido(PropertyReferenceException ex, HttpServletRequest request) {
-        return sortInvalido("'" + ex.getPropertyName() + "'", request);
-    }
-
-    /** O mesmo sort invalido chega embrulhado em duas camadas quando a consulta e um @Query. */
-    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
-    public ResponseEntity<ProblemDetail> sortInvalidoEmQuery(InvalidDataAccessApiUsageException ex, HttpServletRequest request) {
-        return ex.contains(UnknownPathException.class)
-                ? sortInvalido("essa propriedade", request)
-                : response(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno", "Ocorreu um erro inesperado. Tente novamente mais tarde.", request);
+        ProblemDetail problem = base(HttpStatus.BAD_REQUEST, "Parametro invalido",
+                "Nao e possivel ordenar por '" + ex.getPropertyName() + "'.", request);
+        problem.setProperty("parameter", "sort");
+        return ResponseEntity.badRequest().body(problem);
     }
 
     /** Nunca diferencia RA inexistente de senha errada para evitar enumeracao de usuarios. */
@@ -93,12 +86,6 @@ public class GlobalExceptionHandler {
                 "A operacao conflita com dados ja existentes ou ainda referenciados.", request);
     }
 
-    private ResponseEntity<ProblemDetail> sortInvalido(String propriedade, HttpServletRequest request) {
-        ProblemDetail problem = base(HttpStatus.BAD_REQUEST, "Parametro invalido",
-                "Nao e possivel ordenar por " + propriedade + ".", request);
-        problem.setProperty("parameter", "sort");
-        return ResponseEntity.badRequest().body(problem);
-    }
     private ResponseEntity<ProblemDetail> response(HttpStatus status, String title, String detail, HttpServletRequest request) {
         return ResponseEntity.status(status).body(base(status, title, detail, request));
     }

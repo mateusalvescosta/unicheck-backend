@@ -336,8 +336,8 @@ public class BeneficioService {
      * @apiNote Lista os benefícios favoritados pelo aluno. Todos vêm com favorito
      *          igual a true, já que a própria lista é o recorte dos favoritos.
      * @param ra       --> RA do aluno autenticado.
-     * @param pageable --> Configuração de paginação; a ordenação aceita apenas
-     *                 propriedades de BeneficioFavorito, como "favoritadoEm".
+     * @param pageable --> Configuração de paginação; a ordenação é fixa na consulta
+     *                 e o sort recebido é descartado.
      * @return --> Retorna uma página com os benefícios favoritados.
      * @throws EntityNotFoundException --> Lançada caso o aluno não seja
      *                                   encontrado.
@@ -348,7 +348,10 @@ public class BeneficioService {
     public Page<BeneficioSummaryDTO> listarFavoritos(String ra, Pageable pageable) {
         Aluno aluno = identidadeService.alunoPorRa(ra);
 
-        return favoritoRepository.findBeneficiosPorAluno(aluno.getId(), pageable)
+        // A consulta ja traz o ORDER BY proprio, entao o sort da URL e descartado, igual ao buscar.
+        Pageable semSort = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+
+        return favoritoRepository.findBeneficiosPorAluno(aluno.getId(), semSort)
                 .map(beneficio -> toDto(beneficio, true));
     }
 

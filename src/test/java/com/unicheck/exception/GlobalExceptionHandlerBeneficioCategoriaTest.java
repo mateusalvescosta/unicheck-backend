@@ -2,11 +2,9 @@ package com.unicheck.exception;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
-import org.hibernate.query.sqm.UnknownPathException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -122,40 +120,6 @@ class GlobalExceptionHandlerBeneficioCategoriaTest {
         assertEquals(HttpStatus.BAD_REQUEST, resposta.getStatusCode());
         assertEquals("Nao e possivel ordenar por 'string'.", resposta.getBody().getDetail());
         assertEquals("sort", resposta.getBody().getProperties().get("parameter"));
-    }
-
-    /**
-     * @apiNote No caminho do @Query o Hibernate embrulha a UnknownPathException, então olhar só a
-     *          causa direta deixaria passar como 500.
-     * @author Mateus Alves Costa
-     * @since 19.09.2026
-     */
-    @Test
-    void sortInvalidoEmQueryVira400MesmoComACausaAninhada() {
-        InvalidDataAccessApiUsageException erro = new InvalidDataAccessApiUsageException(
-                "Could not resolve attribute",
-                new IllegalArgumentException(new UnknownPathException("Could not resolve attribute 'string'")));
-
-        ResponseEntity<ProblemDetail> resposta = handler.sortInvalidoEmQuery(erro, request);
-
-        assertEquals(HttpStatus.BAD_REQUEST, resposta.getStatusCode());
-        assertEquals("sort", resposta.getBody().getProperties().get("parameter"));
-    }
-
-    /**
-     * @apiNote Uso indevido de API que não seja sort é bug de código, e não erro do cliente.
-     * @author Mateus Alves Costa
-     * @since 19.09.2026
-     */
-    @Test
-    void invalidDataAccessSemCaminhoDesconhecidoContinua500() {
-        InvalidDataAccessApiUsageException erro = new InvalidDataAccessApiUsageException(
-                "Parameter value did not match expected type", new IllegalArgumentException("outro problema"));
-
-        ResponseEntity<ProblemDetail> resposta = handler.sortInvalidoEmQuery(erro, request);
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, resposta.getStatusCode());
-        assertEquals("Ocorreu um erro inesperado. Tente novamente mais tarde.", resposta.getBody().getDetail());
     }
 
     /**

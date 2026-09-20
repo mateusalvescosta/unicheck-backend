@@ -461,6 +461,26 @@ class BeneficioServiceTest {
     }
 
     /**
+     * @apiNote O sort da URL tambem e descartado nos favoritos: a ordem vive na consulta,
+     *          e repassar o nome recebido fazia o Spring Data montar um ORDER BY invalido.
+     * @author Mateus Alves Costa
+     * @since 20.09.2026
+     */
+    @Test
+    void listarFavoritosDescartaOSortRecebido() {
+        when(identidadeService.alunoPorRa("RA001")).thenReturn(aluno(10L));
+        when(favoritoRepository.findBeneficiosPorAluno(eq(10L), any())).thenReturn(Page.empty());
+
+        service.listarFavoritos("RA001", PageRequest.of(1, 4, Sort.by("propriedadeQueNaoExiste")));
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(favoritoRepository).findBeneficiosPorAluno(eq(10L), captor.capture());
+        assertTrue(captor.getValue().getSort().isUnsorted());
+        assertEquals(1, captor.getValue().getPageNumber());
+        assertEquals(4, captor.getValue().getPageSize());
+    }
+
+    /**
      * @apiNote Monta um BeneficioRequestDTO de teste; com nome null os obrigatórios ficam
      *          ausentes, o que simula o PUT parcial.
      * @param nome --> Nome do benefício, ou null para um corpo de atualização parcial.

@@ -2,7 +2,6 @@ package com.unicheck.beneficio.controller;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,15 +38,15 @@ public class FavoritoController {
      * @apiNote Lista os benefícios favoritados pelo aluno autenticado, do mais
      *          recente para o mais antigo.
      * @param jwt      --> Token do aluno autenticado, de onde sai o RA.
-     * @param pageable --> Configuração de paginação; a ordenação aceita apenas
-     *                 propriedades de BeneficioFavorito, como "favoritadoEm".
+     * @param pageable --> Configuração de paginação; a ordenação é fixa na consulta
+     *                 e o parâmetro sort é ignorado.
      * @return --> Retorna 200 com uma página dos benefícios favoritados.
      * @author Mateus Alves Costa
      * @since 18.08.2026
      */
     @GetMapping
     public ResponseEntity<Page<BeneficioSummaryDTO>> listar(@AuthenticationPrincipal Jwt jwt,
-            @PageableDefault(size = 12, sort = "favoritadoEm", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 12) Pageable pageable) {
         return ResponseEntity.ok(service.listarFavoritos(jwt.getSubject(), pageable));
     }
 
