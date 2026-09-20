@@ -70,17 +70,14 @@ public class BeneficioService {
     @Transactional(readOnly = true)
     public Page<BeneficioSummaryDTO> buscar(String termo, TipoBeneficio tipo, Long categoriaId, String ra,
             Pageable pageable) {
-        String padrao = termo == null || termo.isBlank() ? null : "%" + termo.trim().toLowerCase() + "%";
+        String padrao = null;
+        if(termo != null && !termo.isBlank()) padrao = "%" + termo.trim().toLowerCase() + "%";
 
-        Page<Beneficio> pagina = beneficioRepository.buscar(padrao, tipo == null ? null : tipo.name(),
-                categoriaId, pageable);
+        String tipoBuscado = null;
+        if(tipo != null) tipoBuscado = tipo.name();
 
-        Long alunoId = alunoRepository.findByUsuario_Ra(ra).map(Aluno::getId).orElse(null);
-
-        List<Long> ids = pagina.getContent().stream().map(Beneficio::getId).toList();
-        Set<Long> favoritos = alunoId == null || ids.isEmpty()
-                ? Set.of()
-                : favoritoRepository.findBeneficioIdsFavoritados(alunoId, ids);
+        Page<Beneficio> pagina = beneficioRepository.buscar(padrao, tipoBuscado, categoriaId, pageable);
+        Set<Long> favoritos = favoritosDoAluno(ra, pagina.getContent());
 
         return pagina.map(beneficio -> toDto(beneficio, favoritos.contains(beneficio.getId())));
     }
@@ -128,10 +125,10 @@ public class BeneficioService {
         beneficio.setUrl(dto.url().trim());
         beneficio.setTipo(dto.tipo());
         beneficio.setPublicoElegivel(dto.publicoElegivel().trim());
-        beneficio.setIconeUrl(opcional(dto.iconeUrl()));
-        beneficio.setObservacaoElegibilidade(opcional(dto.observacaoElegibilidade()));
-        beneficio.setAvisoImportante(opcional(dto.avisoImportante()));
-        beneficio.setDisponibilidade(opcional(dto.disponibilidade()));
+        if(dto.iconeUrl() != null && !dto.iconeUrl().isBlank()) beneficio.setIconeUrl(dto.iconeUrl().trim());
+        if(dto.observacaoElegibilidade() != null && !dto.observacaoElegibilidade().isBlank()) beneficio.setObservacaoElegibilidade(dto.observacaoElegibilidade().trim());
+        if(dto.avisoImportante() != null && !dto.avisoImportante().isBlank()) beneficio.setAvisoImportante(dto.avisoImportante().trim());
+        if(dto.disponibilidade() != null && !dto.disponibilidade().isBlank()) beneficio.setDisponibilidade(dto.disponibilidade().trim());
 
         substituirCategorias(beneficio, dto.categoriaIds());
         substituirPalavrasChave(beneficio, dto.palavrasChave());
@@ -163,20 +160,21 @@ public class BeneficioService {
         Beneficio beneficio = beneficioRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Benefício não encontrado com id: " + id));
 
-        if(preenchido(dto.nome()) && beneficioRepository.existsByNomeIgnoreCaseAndIdNot(dto.nome().trim(), id)) {
+        if(dto.nome() != null && !dto.nome().isBlank()
+                && beneficioRepository.existsByNomeIgnoreCaseAndIdNot(dto.nome().trim(), id)) {
             throw new ResourceConflictException("Já existe um benefício com o nome '" + dto.nome().trim() + "'.");
         }
 
-        if(preenchido(dto.nome())) beneficio.setNome(dto.nome().trim());
-        if(preenchido(dto.chamada())) beneficio.setChamada(dto.chamada().trim());
-        if(preenchido(dto.descricao())) beneficio.setDescricao(dto.descricao().trim());
-        if(preenchido(dto.url())) beneficio.setUrl(dto.url().trim());
-        if(preenchido(dto.publicoElegivel())) beneficio.setPublicoElegivel(dto.publicoElegivel().trim());
+        if(dto.nome() != null && !dto.nome().isBlank()) beneficio.setNome(dto.nome().trim());
+        if(dto.chamada() != null && !dto.chamada().isBlank()) beneficio.setChamada(dto.chamada().trim());
+        if(dto.descricao() != null && !dto.descricao().isBlank()) beneficio.setDescricao(dto.descricao().trim());
+        if(dto.url() != null && !dto.url().isBlank()) beneficio.setUrl(dto.url().trim());
+        if(dto.publicoElegivel() != null && !dto.publicoElegivel().isBlank()) beneficio.setPublicoElegivel(dto.publicoElegivel().trim());
         if(dto.tipo() != null) beneficio.setTipo(dto.tipo());
-        if(dto.iconeUrl() != null) beneficio.setIconeUrl(opcional(dto.iconeUrl()));
-        if(dto.observacaoElegibilidade() != null) beneficio.setObservacaoElegibilidade(opcional(dto.observacaoElegibilidade()));
-        if(dto.avisoImportante() != null) beneficio.setAvisoImportante(opcional(dto.avisoImportante()));
-        if(dto.disponibilidade() != null) beneficio.setDisponibilidade(opcional(dto.disponibilidade()));
+        if(dto.iconeUrl() != null) beneficio.setIconeUrl(dto.iconeUrl().isBlank() ? null : dto.iconeUrl().trim());
+        if(dto.observacaoElegibilidade() != null) beneficio.setObservacaoElegibilidade(dto.observacaoElegibilidade().isBlank() ? null : dto.observacaoElegibilidade().trim());
+        if(dto.avisoImportante() != null) beneficio.setAvisoImportante(dto.avisoImportante().isBlank() ? null : dto.avisoImportante().trim());
+        if(dto.disponibilidade() != null) beneficio.setDisponibilidade(dto.disponibilidade().isBlank() ? null : dto.disponibilidade().trim());
 
         substituirCategorias(beneficio, dto.categoriaIds());
         substituirPalavrasChave(beneficio, dto.palavrasChave());
@@ -264,25 +262,23 @@ public class BeneficioService {
     }
 
     /**
-     * @apiNote Campo opcional: ausente e vazio significam a mesma coisa, entao ambos viram null.
-     * @param valor --> Texto recebido no corpo da requisicao.
-     * @return --> Retorna o texto sem espacos nas pontas, ou null se nao houver conteudo.
+     * @apiNote Descobre, entre os beneficios de uma pagina, quais o aluno favoritou.
+     *
+     *          Uma consulta so para a pagina inteira. Quem nao tem perfil de aluno, como o
+     *          ADMIN, nao tem favoritos, e pagina vazia nem chega a consultar: uma clausula
+     *          IN com lista vazia e SQL invalido em varios bancos.
+     * @param ra         --> RA do usuario autenticado.
+     * @param beneficios --> Beneficios da pagina corrente.
+     * @return --> Retorna os IDs favoritados, ou vazio quando nao ha o que consultar.
      * @author Mateus Alves Costa
      * @since 20.09.2026
      */
-    private static String opcional(String valor) {
-        return valor == null || valor.isBlank() ? null : valor.trim();
-    }
+    private Set<Long> favoritosDoAluno(String ra, List<Beneficio> beneficios) {
+        Long alunoId = alunoRepository.findByUsuario_Ra(ra).map(Aluno::getId).orElse(null);
+        if(alunoId == null || beneficios.isEmpty()) return Set.of();
 
-    /**
-     * @apiNote Campo obrigatorio na atualizacao: so vale mexer se veio com conteudo.
-     * @param valor --> Texto recebido no corpo da requisicao.
-     * @return --> Retorna true quando o campo foi informado e nao esta em branco.
-     * @author Mateus Alves Costa
-     * @since 20.09.2026
-     */
-    private static boolean preenchido(String valor) {
-        return valor != null && !valor.isBlank();
+        return favoritoRepository.findBeneficioIdsFavoritados(alunoId,
+                beneficios.stream().map(Beneficio::getId).toList());
     }
 
     /**
@@ -333,7 +329,7 @@ public class BeneficioService {
         if(palavras == null) return;
 
         beneficio.getPalavrasChave().clear();
-        palavras.stream().filter(BeneficioService::preenchido).map(String::trim)
+        palavras.stream().filter(palavra -> palavra != null && !palavra.isBlank()).map(String::trim)
                 .forEach(beneficio.getPalavrasChave()::add);
     }
 
