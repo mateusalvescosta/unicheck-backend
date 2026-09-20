@@ -2,6 +2,8 @@ package com.unicheck.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.core.PropertyReferenceException;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +12,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.net.URI;
 import java.time.OffsetDateTime;
@@ -24,6 +27,12 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.NOT_FOUND, "Recurso nao encontrado", ex.getMessage(), request);
     }
 
+    /** Mesmo 404 da ResourceNotFoundException, para quem prefere a excecao ja definida pela JPA. */
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ProblemDetail> entityNotFound(EntityNotFoundException ex, HttpServletRequest request) {
+        return response(HttpStatus.NOT_FOUND, "Recurso nao encontrado", ex.getMessage(), request);
+    }
+
     /** Validacao de entrada e erro do cliente, por isso retorna 400 e os campos afetados. */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ProblemDetail> validation(MethodArgumentNotValidException ex, HttpServletRequest request) {
@@ -31,6 +40,24 @@ public class GlobalExceptionHandler {
         List<Map<String, String>> errors = ex.getBindingResult().getFieldErrors().stream()
                 .map(error -> Map.of("field", error.getField(), "message", error.getDefaultMessage())).toList();
         problem.setProperty("errors", errors);
+        return ResponseEntity.badRequest().body(problem);
+    }
+
+    /** Filtro com valor fora do enum, como ?tipo=GRATIS, e erro do cliente e nao 500. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ProblemDetail> typeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        ProblemDetail problem = base(HttpStatus.BAD_REQUEST, "Parametro invalido",
+                "O valor enviado nao e aceito por este parametro.", request);
+        problem.setProperty("parameter", ex.getName());
+        return ResponseEntity.badRequest().body(problem);
+    }
+
+    /** Sort apontando para propriedade que nao existe, como ?sort=string, e erro do cliente e nao 500. */
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ProblemDetail> sortInvalido(PropertyReferenceException ex, HttpServletRequest request) {
+        ProblemDetail problem = base(HttpStatus.BAD_REQUEST, "Parametro invalido",
+                "Nao e possivel ordenar por '" + ex.getPropertyName() + "'.", request);
+        problem.setProperty("parameter", "sort");
         return ResponseEntity.badRequest().body(problem);
     }
 
@@ -46,16 +73,17 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.FORBIDDEN, "Acesso negado", "Nao foi possivel concluir esta operacao.", request);
     }
 
-    @ExceptionHandler({ResourceConflictException.class, DataIntegrityViolationException.class})
-    public ResponseEntity<ProblemDetail> conflict(Exception ex, HttpServletRequest request) {
-        // A constraint do banco ainda pode vencer uma verificacao concorrente; ambos os caminhos devem responder 409.
-        String detail = ex instanceof ResourceConflictException ? ex.getMessage() : "RA ou email ja cadastrado, ou registro ainda referenciado.";
-        return response(HttpStatus.CONFLICT, "Conflito de dados", detail, request);
+    /** Regra de negocio violada. A mensagem e escrita pela Service e vai inteira ao cliente. */
+    @ExceptionHandler(ResourceConflictException.class)
+    public ResponseEntity<ProblemDetail> conflict(ResourceConflictException ex, HttpServletRequest request) {
+        return response(HttpStatus.CONFLICT, "Conflito de dados", ex.getMessage(), request);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ProblemDetail> generic(Exception ex, HttpServletRequest request) {
-        return response(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno", "Ocorreu um erro inesperado. Tente novamente mais tarde.", request);
+    /** Constraint do banco: a mensagem original cita tabela e constraint, entao nao vai ao cliente. */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ProblemDetail> violacaoDeIntegridade(DataIntegrityViolationException ex, HttpServletRequest request) {
+        return response(HttpStatus.CONFLICT, "Conflito de dados",
+                "A operacao conflita com dados ja existentes ou ainda referenciados.", request);
     }
 
     private ResponseEntity<ProblemDetail> response(HttpStatus status, String title, String detail, HttpServletRequest request) {

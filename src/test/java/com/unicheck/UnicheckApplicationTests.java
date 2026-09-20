@@ -1,5 +1,7 @@
 package com.unicheck;
 
+import com.unicheck.beneficio.repository.*;
+import com.unicheck.categoria.repository.*;
 import com.unicheck.checklist.repository.*;
 import com.unicheck.gameficacao.repository.*;
 import com.unicheck.usuario.repository.*;
@@ -46,6 +48,11 @@ class UnicheckApplicationTests {
     @MockitoBean ChecklistPrerequisitoRepository checklistPrerequisitoRepository;
     @MockitoBean NivelRepository nivelRepository;
     @MockitoBean AlunoSeloRepository alunoSeloRepository;
+    // Beneficio e categoria tambem entram no contexto real; sem o mock, BeneficioService
+    // nao encontra dependencia e a aplicacao inteira deixa de subir neste teste.
+    @MockitoBean BeneficioRepository beneficioRepository;
+    @MockitoBean BeneficioFavoritoRepository beneficioFavoritoRepository;
+    @MockitoBean CategoriaRepository categoriaRepository;
     @Autowired MockMvc mockMvc;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired ObjectMapper objectMapper;
