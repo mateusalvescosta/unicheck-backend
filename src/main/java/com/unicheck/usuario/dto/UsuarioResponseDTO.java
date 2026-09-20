@@ -2,6 +2,7 @@ package com.unicheck.usuario.dto;
 
 import com.unicheck.usuario.enumeration.RoleUsuario;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 /**
@@ -17,6 +18,8 @@ import java.time.OffsetDateTime;
 public record UsuarioResponseDTO(
         Long id,
         String nome,
+        String ra,
+        LocalDate dataNascimento,
         RoleUsuario role,
         String fotoUrl,
         String email,

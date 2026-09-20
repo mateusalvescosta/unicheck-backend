@@ -1,17 +1,6 @@
 package com.unicheck.checklist.domain;
 
-import java.util.HashSet;
-import java.util.Set;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,12 +22,19 @@ public class ItemChecklist {
     @JoinColumn(name = "checklist_id", nullable = false)
     private Checklist checklist;
 
-    @OneToMany(mappedBy = "id.item")
-    private Set<ProgressoItem> progressos = new HashSet<>();
-
     @Column(nullable = false, length = 150)
     private String titulo;
 
+    @Column(nullable = false, length = 500)
+    private String descricao;
+
+    /** Markdown armazenado como texto; a sanitização pertence ao frontend antes da renderização. */
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String conteudo;
+
     @Column(nullable = false)
-    private int ordem;
+    private Integer ordem;
+
+    @Column(nullable = false)
+    private Integer xp;
 }

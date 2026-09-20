@@ -25,8 +25,13 @@ public class ProgressoItem {
     @Column(nullable = false, length = 20)
     private StatusProgressoItem status;
 
-    @Column(columnDefinition = "TIMESTAMP", nullable = false)
+    // A migration permite nulo porque um item PENDENTE ainda nao possui instante de conclusao.
+    @Column(name = "data_conclusao", columnDefinition = "TIMESTAMP")
     private OffsetDateTime dataConclusao;
+
+    /** Valor histórico: nunca é recalculado a partir do template da etapa. */
+    @Column(name = "xp_creditado")
+    private Integer xpCreditado;
 
     public ProgressoItem(Aluno aluno, ItemChecklist itemChecklist, StatusProgressoItem status, OffsetDateTime dataConclusao) {
         id.setAluno(aluno);
@@ -66,4 +71,7 @@ public class ProgressoItem {
     public void setDataConclusao(OffsetDateTime dataConclusao) {
         this.dataConclusao = dataConclusao;
     }
+
+    public Integer getXpCreditado() { return xpCreditado; }
+    public void setXpCreditado(Integer xpCreditado) { this.xpCreditado = xpCreditado; }
 }

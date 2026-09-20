@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.time.LocalDate;
+
 /**
  * DTO de auto-cadastro do Aluno (tela pública).
  * Não tem "role" -- a Service sempre fixa RoleUsuario.ALUNO, nunca vem do cliente.
@@ -20,15 +22,15 @@ public record CadastroAlunoRequestDTO(
         @Email(message = "Email inválido")
         String email,
 
-        @NotBlank(message = "Senha é obrigatória")
-        @Size(min = 8, message = "Senha deve ter no mínimo 8 caracteres")
-        String senha,
-
         @NotBlank(message = "RA é obrigatório")
         String ra,
 
-        @NotNull(message = "Curso é obrigatório")
-        Long cursoId,
+        @NotNull(message = "Data de nascimento é obrigatória")
+        LocalDate dataNascimento,
+
+        @NotBlank(message = "Senha é obrigatória")
+        @Size(min = 8, message = "Senha deve conter no mínimo 8 caracteres")
+        String senha,
 
         @NotBlank(message = "Período é obrigatório")
         String periodo

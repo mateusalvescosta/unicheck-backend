@@ -6,38 +6,41 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.time.LocalDate;
+
 /**
- * DTO de ENTRADA (Request) do Usuario.
+ * Dados para o CRUD administrativo de Usuario.
  *
- * É o que o cliente (front-end) manda no corpo (body) da requisição
- * pra criar um Usuario.
+ * Este endpoint (/usuarios) so cria usuarios com role ALUNO -- a criacao de
+ * ADMIN e responsabilidade exclusiva de POST /admins (CriarAdminRequestDTO),
+ * que gera a senha temporaria no servidor e nao aceita senha vinda do cliente.
+ * Isso evita ter dois caminhos diferentes fazendo a mesma coisa de formas
+ * distintas. Por isso "senha" e obrigatoria aqui (sempre e o proprio Admin
+ * escolhendo a senha inicial do Aluno) e o campo "cargo" foi removido, ja
+ * que so fazia sentido no fluxo de ADMIN.
  *
- * Por que não usar a entidade Usuario direto na Controller?
- * 1) Segurança: a entidade tem campos como "id" e "criadoEm" que quem
- *    consome a API NÃO deveria poder definir manualmente.
- * 2) Desacoplamento: se a entidade mudar (novo campo no banco, por exemplo),
- *    o "contrato" da API não muda junto sem querer.
- *
- * Usamos "record" (recurso do Java moderno) em vez de classe com Lombok
- * porque um DTO de request é só um "carregador de dados" imutável -- não
- * precisa de setters. O record já gera construtor, getters (nome do campo,
- * sem "get"), equals, hashCode e toString sozinho.
+ * Senha nunca volta na resposta.
  */
 public record UsuarioRequestDTO(
-        @NotBlank(message = "Nome é obrigatório!")
+        @NotBlank(message = "Nome e obrigatorio!")
         String nome,
 
-        @NotBlank(message = "Senha é Obrigatória!")
-        @Size(min = 8, message = "Senha deve conter no mínimo 8 caracteres!")
-        String senha,   // vem em texto puro aqui; quem criptografa (BCrypt) é a Service, não o DTO
+        @NotBlank(message = "Senha e obrigatoria!")
+        @Size(min = 8, message = "Senha deve conter no minimo 8 caracteres!")
+        String senha,
 
-        @NotNull(message = "Role é obrigatório!")
+        @NotBlank(message = "RA e obrigatorio!")
+        String ra,
+
+        @NotNull(message = "Data de nascimento e obrigatoria!")
+        LocalDate dataNascimento,
+
+        @NotNull(message = "Role e obrigatoria!")
         RoleUsuario role,
 
         String fotoUrl,
 
-        @NotBlank(message = "Email é obrigatório!")
-        @Email(message = "Email inválido!")
+        @NotBlank(message = "Email e obrigatorio!") @Email(message = "Email invalido!")
         String email
 ) {
 }

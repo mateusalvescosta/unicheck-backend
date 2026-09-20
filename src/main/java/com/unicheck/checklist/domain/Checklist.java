@@ -1,23 +1,9 @@
 package com.unicheck.checklist.domain;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-
-import com.unicheck.curso.domain.Curso;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import com.unicheck.checklist.enumeration.StatusChecklist;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -35,30 +21,27 @@ public class Checklist {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "curso_id")
-    private Curso curso;
-
     @Column(nullable = false, length = 150)
     private String nome;
 
-    @Column(columnDefinition = "TEXT", length = 500)
+    @Column(nullable = false, length = 500)
     private String descricao;
 
+    @Column(nullable = false)
+    private Integer ordem;
+
+    /** Bônus concedido somente ao terminar a última etapa. */
+    @Column(nullable = false)
     private Integer xp;
 
-    @Column(name = "horas_complementares")
+    @Column(name = "horas_complementares", nullable = false)
     private Integer horasComplementares;
 
-    @OneToMany(mappedBy = "checklist")    
-    List<ItemChecklist> itens = new ArrayList<>();
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private StatusChecklist status;
 
-    @ManyToMany
-    @JoinTable(name = "tb_checklist_prerequisito",
-        joinColumns = @JoinColumn(name = "checklist_id"),
-        inverseJoinColumns = @JoinColumn(name = "checklist_requisito_id"))
-    Set<Checklist> prerequisitos = new HashSet<>();
-
-    @OneToMany(mappedBy = "id.checklist")
-    private Set<ChecklistConcluido> concluidos = new HashSet<>();
+    @OrderBy("ordem ASC")
+    @OneToMany(mappedBy = "checklist", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ItemChecklist> itens = new ArrayList<>();
 }

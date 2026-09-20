@@ -20,6 +20,9 @@ import java.util.Optional;
  */
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
+    Optional<Usuario> findByRa(String ra);
+    boolean existsByRa(String ra);
+
     // Usado no login: busca o usuário pelo email (que é @Column(unique = true)).
     Optional<Usuario> findByEmail(String email);
 
