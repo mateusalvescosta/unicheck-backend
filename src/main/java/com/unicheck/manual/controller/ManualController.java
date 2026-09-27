@@ -25,8 +25,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
- * @apiNote Endpoints do Manual do Aluno. A leitura é liberada para qualquer
- *          usuário autenticado; a escrita é restrita ao ADMIN.
+ * @apiNote Endpoints do Manual do Aluno. A leitura é liberada para ALUNO e
+ *          ADMIN, pela regra da classe; a escrita é restrita ao ADMIN, pela
+ *          regra de cada método, que prevalece sobre a da classe.
  * @author Mateus Alves Costa
  * @since 27.09.2026
  */
@@ -34,6 +35,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/manuais")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ALUNO', 'ADMIN')")
 @SecurityRequirement(name = "bearerAuth")
 public class ManualController {
 

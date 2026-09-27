@@ -30,8 +30,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * @apiNote Autorização do ManualController: leitura liberada a qualquer autenticado,
- *          escrita (inclusive a escolha dos atalhos) restrita ao ADMIN.
+ * @apiNote Autorização do ManualController: leitura liberada a ALUNO e ADMIN, escrita
+ *          (inclusive a escolha dos atalhos) restrita ao ADMIN, e nada para outro papel.
  *
  *          O controller é chamado direto, sem camada web, então o que está sob teste é o
  *          PreAuthorize resolvido pelo EnableMethodSecurity, e não o roteamento HTTP.
@@ -110,14 +110,47 @@ class ManualControllerSecurityTest {
     }
 
     /**
-     * @apiNote Sem Authentication no contexto a escrita fica barrada.
+     * @apiNote O ADMIN não perde o acesso de leitura por ser quem escreve.
+     * @author Mateus Alves Costa
+     * @since 27.09.2026
+     */
+    @Test @WithMockUser(roles = "ADMIN")
+    void adminTambemLe() {
+        assertEquals(200, controller.buscar(null, null, 0, 20).getStatusCode().value());
+        assertEquals(200, controller.listarCategorias().getStatusCode().value());
+        assertEquals(200, controller.listarAtalhos().getStatusCode().value());
+        assertEquals(200, controller.findById(1L).getStatusCode().value());
+    }
+
+    /**
+     * @apiNote Um token válido com papel que não seja ALUNO nem ADMIN não lê nem escreve: a leitura
+     *          exige um dos dois papéis, e não apenas estar autenticado.
+     * @author Mateus Alves Costa
+     * @since 27.09.2026
+     */
+    @Test @WithMockUser(roles = "VISITANTE")
+    void papelDesconhecidoNaoLeNemEscreve() {
+        assertThrows(AccessDeniedException.class, () -> controller.buscar(null, null, 0, 20));
+        assertThrows(AccessDeniedException.class, () -> controller.listarCategorias());
+        assertThrows(AccessDeniedException.class, () -> controller.listarAtalhos());
+        assertThrows(AccessDeniedException.class, () -> controller.findById(1L));
+        assertThrows(AccessDeniedException.class, () -> controller.create(request()));
+        assertThrows(AccessDeniedException.class,
+                () -> controller.substituirAtalhos(new AtalhosManualRequestDTO(List.of())));
+        verifyNoInteractions(service);
+    }
+
+    /**
+     * @apiNote Sem Authentication no contexto nem a leitura nem a escrita passam.
      * @author Mateus Alves Costa
      * @since 27.09.2026
      */
     @Test
-    void semAutenticacaoNaoEscreve() {
+    void semAutenticacaoNaoLeNemEscreve() {
+        assertThrows(AuthenticationCredentialsNotFoundException.class, () -> controller.buscar(null, null, 0, 20));
+        assertThrows(AuthenticationCredentialsNotFoundException.class, () -> controller.findById(1L));
         assertThrows(AuthenticationCredentialsNotFoundException.class, () -> controller.create(request()));
-        verify(service, never()).create(any());
+        verifyNoInteractions(service);
     }
 
     private ManualRequestDTO request() {
