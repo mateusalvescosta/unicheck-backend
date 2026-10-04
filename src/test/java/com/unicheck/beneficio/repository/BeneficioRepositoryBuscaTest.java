@@ -46,7 +46,7 @@ class BeneficioRepositoryBuscaTest {
 
     static boolean bancoDisponivel() {
         try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress("localhost", 5439), 500);
+            socket.connect(new InetSocketAddress("localhost", 5432), 500);
             return true;
         } catch (Exception naoDisponivel) {
             return false;

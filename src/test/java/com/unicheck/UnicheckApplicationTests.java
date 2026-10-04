@@ -2,6 +2,7 @@ package com.unicheck;
 
 import com.unicheck.beneficio.repository.*;
 import com.unicheck.categoria.repository.*;
+import com.unicheck.manual.repository.*;
 import com.unicheck.checklist.repository.*;
 import com.unicheck.gameficacao.repository.*;
 import com.unicheck.usuario.repository.*;
@@ -53,6 +54,8 @@ class UnicheckApplicationTests {
     @MockitoBean BeneficioRepository beneficioRepository;
     @MockitoBean BeneficioFavoritoRepository beneficioFavoritoRepository;
     @MockitoBean CategoriaRepository categoriaRepository;
+    @MockitoBean ManualRepository manualRepository;
+    @MockitoBean AtalhoManualRepository atalhoManualRepository;
     @Autowired MockMvc mockMvc;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired ObjectMapper objectMapper;
