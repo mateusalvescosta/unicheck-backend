@@ -1,5 +1,7 @@
 package com.unicheck;
 
+import com.unicheck.auth.domain.TokenRedefinicaoSenha;
+import com.unicheck.auth.repository.TokenRedefinicaoSenhaRepository;
 import com.unicheck.beneficio.repository.*;
 import com.unicheck.categoria.repository.*;
 import com.unicheck.manual.repository.*;
@@ -19,8 +21,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import tools.jackson.databind.ObjectMapper;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.OffsetDateTime;
+import java.util.HexFormat;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.blankOrNullString;
 import static org.mockito.ArgumentMatchers.any;
@@ -56,6 +64,7 @@ class UnicheckApplicationTests {
     @MockitoBean CategoriaRepository categoriaRepository;
     @MockitoBean ManualRepository manualRepository;
     @MockitoBean AtalhoManualRepository atalhoManualRepository;
+    @MockitoBean TokenRedefinicaoSenhaRepository tokenRedefinicaoSenhaRepository;
     @Autowired MockMvc mockMvc;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired ObjectMapper objectMapper;
@@ -142,6 +151,55 @@ class UnicheckApplicationTests {
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"ra\":\"ADMIN-TROCA\",\"senha\":\"senha-nova-segura\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.trocarSenhaObrigatorio").value(false));
+    }
+
+    @Test
+    void rotasDeRecuperacaoDeSenhaSaoPublicasEAsDemaisContinuamProtegidas() throws Exception {
+        Usuario existente = usuario("RA-RECUPERA", "senha-qualquer", RoleUsuario.ALUNO, false);
+        existente.setEmail("existe@example.invalid");
+        when(usuarioRepository.findByEmail("existe@example.invalid")).thenReturn(Optional.of(existente));
+
+        // Sem JWT: o mesmo 202 e o mesmo corpo para e-mail cadastrado e nao cadastrado.
+        String cadastrado = mockMvc.perform(post("/auth/esqueci-senha").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"existe@example.invalid\"}"))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
+        String naoCadastrado = mockMvc.perform(post("/auth/esqueci-senha").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"nao-existe@example.invalid\"}"))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
+        assertEquals(cadastrado, naoCadastrado);
+
+        mockMvc.perform(post("/auth/redefinir-senha").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"nao-existe\",\"novaSenha\":\"senha-nova-segura\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Link inválido ou expirado."));
+
+        mockMvc.perform(get("/usuarios")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void redefinirSenhaPorTokenFazASenhaNovaAutenticarEAAntigaNao() throws Exception {
+        Usuario usuario = usuario("RA-REDEFINE", "senha-antiga-teste", RoleUsuario.ALUNO, true);
+        TokenRedefinicaoSenha registro = new TokenRedefinicaoSenha();
+        registro.setUsuario(usuario);
+        registro.setExpiraEm(OffsetDateTime.now().plusMinutes(30));
+        String hash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest("token-de-teste".getBytes(StandardCharsets.UTF_8)));
+        when(tokenRedefinicaoSenhaRepository.findByTokenHash(hash)).thenReturn(Optional.of(registro));
+        when(tokenRedefinicaoSenhaRepository.invalidarPendentes(eq(1L), any())).thenReturn(1);
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByRa("RA-REDEFINE")).thenReturn(Optional.of(usuario));
+
+        mockMvc.perform(post("/auth/redefinir-senha").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"token-de-teste\",\"novaSenha\":\"senha-nova-segura\"}"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ra\":\"RA-REDEFINE\",\"senha\":\"senha-antiga-teste\"}"))
+                .andExpect(status().isUnauthorized());
+        // A flag de troca obrigatoria tambem foi zerada: o login nao pede outra troca.
+        mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ra\":\"RA-REDEFINE\",\"senha\":\"senha-nova-segura\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.trocarSenhaObrigatorio").value(false));
     }
 
