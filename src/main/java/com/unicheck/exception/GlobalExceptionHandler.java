@@ -73,6 +73,12 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.FORBIDDEN, "Acesso negado", "Nao foi possivel concluir esta operacao.", request);
     }
 
+    /** Mesma resposta para token inexistente, expirado ou usado, para nao revelar qual dos casos ocorreu. */
+    @ExceptionHandler(LinkRedefinicaoInvalidoException.class)
+    public ResponseEntity<ProblemDetail> linkRedefinicaoInvalido(LinkRedefinicaoInvalidoException ex, HttpServletRequest request) {
+        return response(HttpStatus.BAD_REQUEST, "Link inválido", ex.getMessage(), request);
+    }
+
     /** Regra de negocio violada. A mensagem e escrita pela Service e vai inteira ao cliente. */
     @ExceptionHandler(ResourceConflictException.class)
     public ResponseEntity<ProblemDetail> conflict(ResourceConflictException ex, HttpServletRequest request) {
