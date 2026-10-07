@@ -95,7 +95,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Login e cadastro iniciam a jornada sem token; Swagger fica aberto somente para documentacao do MVP.
-                        .requestMatchers("/auth/login", "/auth/cadastro", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/auth/login", "/auth/cadastro", "/auth/esqueci-senha", "/auth/redefinir-senha", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth
                         .authenticationEntryPoint(problemHandler)
