@@ -1,6 +1,7 @@
 package com.unicheck.manual.service;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -30,6 +31,8 @@ import com.unicheck.manual.dto.PassoManualDTO;
 import com.unicheck.manual.enumeration.CategoriaManual;
 import com.unicheck.manual.repository.AtalhoManualRepository;
 import com.unicheck.manual.repository.ManualRepository;
+import com.unicheck.notificacao.enumeration.TipoNotificacao;
+import com.unicheck.notificacao.service.NotificacaoService;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +49,7 @@ public class ManualService {
 
     private final ManualRepository manualRepository;
     private final AtalhoManualRepository atalhoRepository;
+    private final NotificacaoService notificacaoService;
 
     /**
      * @apiNote Busca de "Qual é a sua dúvida?" e listagem por assunto. Sem termo e
@@ -129,7 +133,9 @@ public class ManualService {
         }
         manual.setOrdem(ordem);
 
-        return toDto(manualRepository.save(manual));
+        Manual salvo = manualRepository.save(manual);
+        notificacaoService.notificarAlunos(TipoNotificacao.MANUAL_NOVO, salvo.getId(), "Novo manual: " + salvo.getTitulo());
+        return toDto(salvo);
     }
 
     /**
@@ -185,6 +191,7 @@ public class ManualService {
             outro.setProximoPassoManual(null);
         }
 
+        notificacaoService.removerDoObjeto(id, TipoNotificacao.MANUAL_NOVO);
         manualRepository.delete(manual);
         manualRepository.deslocarOrdem(ordem + 1, Integer.MAX_VALUE, -1);
     }
@@ -353,6 +360,12 @@ public class ManualService {
     private String textoOuNull(String valor) {
         if(valor == null || valor.isBlank()) return null;
         return valor.trim();
+    }
+
+    /** Cards dos manuais informados, no formato da busca; usado pelas notificações. Ids inexistentes ficam de fora. */
+    @Transactional(readOnly = true)
+    public Map<Long, ManualSummaryDTO> resumosPorIds(Collection<Long> ids) {
+        return manualRepository.findAllById(ids).stream().collect(Collectors.toMap(Manual::getId, this::toSummary));
     }
 
     private ManualSummaryDTO toSummary(Manual manual) {

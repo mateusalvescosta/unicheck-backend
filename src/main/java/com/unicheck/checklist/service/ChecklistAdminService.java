@@ -5,6 +5,8 @@ import com.unicheck.checklist.dto.*;
 import com.unicheck.checklist.enumeration.StatusChecklist;
 import com.unicheck.checklist.repository.*;
 import com.unicheck.exception.*;
+import com.unicheck.notificacao.enumeration.TipoNotificacao;
+import com.unicheck.notificacao.service.NotificacaoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ public class ChecklistAdminService {
     private final ProgressoItemRepository progressoRepository;
     private final ChecklistConcluidoRepository concluidoRepository;
     private final ChecklistPrerequisitoRepository prerequisitoRepository;
+    private final NotificacaoService notificacaoService;
 
     @Transactional
     public ChecklistAdminResponseDTO criar(ChecklistRequestDTO dto) {
@@ -105,7 +108,11 @@ public class ChecklistAdminService {
     public ChecklistAdminResponseDTO publicar(Long id) {
         Checklist c = encontrarBloqueado(checklistRepository.bloquearTodos(), id);
         if (c.getStatus() == StatusChecklist.ARQUIVADO) throw new ResourceConflictException("Checklist arquivado nao pode ser republicado");
-        validarPublicacao(c); c.setStatus(StatusChecklist.PUBLICADO); return resposta(c);
+        // So a saida do rascunho e novidade para o aluno; publicar o que ja esta publicado nao notifica de novo.
+        boolean primeiraPublicacao = c.getStatus() == StatusChecklist.RASCUNHO;
+        validarPublicacao(c); c.setStatus(StatusChecklist.PUBLICADO);
+        if (primeiraPublicacao) notificacaoService.notificarAlunos(TipoNotificacao.CHECKLIST_NOVO, c.getId(), "Novo checklist: " + c.getNome());
+        return resposta(c);
     }
 
     @Transactional
@@ -125,6 +132,7 @@ public class ChecklistAdminService {
         if (!prerequisitoRepository.findByIdChecklistRequisitoId(id).isEmpty())
             throw new ResourceConflictException("Checklist e requisito de outra fase e nao pode ser excluido");
         prerequisitoRepository.findByIdChecklistId(id).forEach(prerequisitoRepository::delete);
+        notificacaoService.removerDoObjeto(id, TipoNotificacao.CHECKLIST_NOVO, TipoNotificacao.CHECKLIST_PARADO);
         checklistRepository.delete(c);
     }
 
