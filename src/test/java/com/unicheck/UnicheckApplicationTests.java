@@ -2,6 +2,7 @@ package com.unicheck;
 
 import com.unicheck.auth.domain.TokenRedefinicaoSenha;
 import com.unicheck.auth.repository.TokenRedefinicaoSenhaRepository;
+import com.unicheck.notificacao.repository.NotificacaoRepository;
 import com.unicheck.beneficio.repository.*;
 import com.unicheck.categoria.repository.*;
 import com.unicheck.manual.repository.*;
@@ -65,6 +66,7 @@ class UnicheckApplicationTests {
     @MockitoBean ManualRepository manualRepository;
     @MockitoBean AtalhoManualRepository atalhoManualRepository;
     @MockitoBean TokenRedefinicaoSenhaRepository tokenRedefinicaoSenhaRepository;
+    @MockitoBean NotificacaoRepository notificacaoRepository;
     @Autowired MockMvc mockMvc;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired ObjectMapper objectMapper;

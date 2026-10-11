@@ -18,6 +18,8 @@ import com.unicheck.usuario.service.IdentidadeService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.unicheck.notificacao.enumeration.TipoNotificacao;
+import com.unicheck.notificacao.service.NotificacaoService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -51,6 +53,7 @@ class BeneficioServiceTest {
     @Mock private BeneficioFavoritoRepository favoritoRepository;
     @Mock private AlunoRepository alunoRepository;
     @Mock private IdentidadeService identidadeService;
+    @Mock private NotificacaoService notificacaoService;
     @InjectMocks private BeneficioService service;
 
     /**
@@ -335,6 +338,50 @@ class BeneficioServiceTest {
 
         assertEquals("chamada original", retorno.chamada());
         assertEquals("Bolsa", retorno.nome());
+    }
+
+    /**
+     * @apiNote Benefício novo vira notificação para os alunos, com o id já gerado pelo save.
+     */
+    @Test
+    void createNotificaOsAlunosDepoisDeSalvar() {
+        when(beneficioRepository.existsByNomeIgnoreCase("Bolsa")).thenReturn(false);
+        when(categoriaRepository.findAllById(Set.of(5L))).thenReturn(List.of(categoria(5L, "Educacao", true)));
+        when(beneficioRepository.save(any(Beneficio.class))).thenAnswer(invocacao -> {
+            Beneficio salvo = invocacao.getArgument(0);
+            salvo.setId(1L);
+            return salvo;
+        });
+
+        service.create(request("Bolsa", Set.of(5L)));
+
+        verify(notificacaoService).notificarAlunos(TipoNotificacao.BENEFICIO_NOVO, 1L, "Novo benefício: Bolsa");
+    }
+
+    /**
+     * @apiNote Cadastro recusado não notifica ninguém.
+     */
+    @Test
+    void createRecusadoNaoNotifica() {
+        when(beneficioRepository.existsByNomeIgnoreCase("Bolsa")).thenReturn(true);
+
+        assertThrows(ResourceConflictException.class, () -> service.create(request("Bolsa", Set.of(5L))));
+
+        verifyNoInteractions(notificacaoService);
+    }
+
+    /**
+     * @apiNote As notificações do benefício somem antes dele, para nenhuma levar a algo inexistente.
+     */
+    @Test
+    void deleteRemoveAsNotificacoesAntesDeApagar() {
+        when(beneficioRepository.existsById(1L)).thenReturn(true);
+
+        service.delete(1L);
+
+        var ordem = inOrder(notificacaoService, beneficioRepository);
+        ordem.verify(notificacaoService).removerDoObjeto(1L, TipoNotificacao.BENEFICIO_NOVO);
+        ordem.verify(beneficioRepository).deleteById(1L);
     }
 
     /**
