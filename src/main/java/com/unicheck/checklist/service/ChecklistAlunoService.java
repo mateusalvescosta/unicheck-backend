@@ -54,6 +54,14 @@ public class ChecklistAlunoService {
         return base;
     }
 
+    /** Cards dos checklists informados, iguais aos de listar(); usado pelas notificações. Ids inexistentes ficam de fora. */
+    @Transactional(readOnly = true)
+    public Map<Long, ChecklistAlunoResponseDTO> cardsPorIds(Collection<Long> ids, String ra) {
+        Aluno aluno = identidadeService.alunoPorRa(ra);
+        return checklistRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Checklist::getId, c -> resposta(c, aluno, false)));
+    }
+
     @Transactional
     public ConclusaoEtapaResponseDTO concluir(Long checklistId, Long itemId, String ra) {
         // Checklist é bloqueado antes do Aluno; operações administrativas usam o mesmo lock e não correm com o primeiro progresso.
