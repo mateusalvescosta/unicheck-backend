@@ -1,7 +1,9 @@
 package com.unicheck.beneficio.service;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -25,6 +27,8 @@ import com.unicheck.categoria.domain.Categoria;
 import com.unicheck.categoria.dto.CategoriaResponseDTO;
 import com.unicheck.categoria.repository.CategoriaRepository;
 import com.unicheck.exception.ResourceConflictException;
+import com.unicheck.notificacao.enumeration.TipoNotificacao;
+import com.unicheck.notificacao.service.NotificacaoService;
 import com.unicheck.usuario.domain.Aluno;
 import com.unicheck.usuario.repository.AlunoRepository;
 import com.unicheck.usuario.service.IdentidadeService;
@@ -48,6 +52,7 @@ public class BeneficioService {
     private final BeneficioFavoritoRepository favoritoRepository;
     private final AlunoRepository alunoRepository;
     private final IdentidadeService identidadeService;
+    private final NotificacaoService notificacaoService;
 
     /**
      * @apiNote Busca da listagem, com filtros opcionais de texto, tipo e categoria.
@@ -134,7 +139,9 @@ public class BeneficioService {
         substituirPalavrasChave(beneficio, dto.palavrasChave());
         substituirPassos(beneficio, dto.passos());
 
-        return toDto(beneficioRepository.save(beneficio));
+        Beneficio salvo = beneficioRepository.save(beneficio);
+        notificacaoService.notificarAlunos(TipoNotificacao.BENEFICIO_NOVO, salvo.getId(), "Novo benefício: " + salvo.getNome());
+        return toDto(salvo);
     }
 
     /**
@@ -197,6 +204,7 @@ public class BeneficioService {
         if(!beneficioRepository.existsById(id)) {
             throw new EntityNotFoundException("Benefício não encontrado com id: " + id);
         }
+        notificacaoService.removerDoObjeto(id, TipoNotificacao.BENEFICIO_NOVO);
         beneficioRepository.deleteById(id);
     }
 
@@ -273,6 +281,22 @@ public class BeneficioService {
      * @author Mateus Alves Costa
      * @since 20.09.2026
      */
+    /**
+     * @apiNote Monta, de uma vez, os cards dos benefícios informados, no mesmo formato
+     *          da busca e com o favorito do aluno. Usado pelas notificações; ids de
+     *          benefícios que não existem mais ficam de fora do mapa.
+     * @param ids --> IDs dos benefícios.
+     * @param ra  --> RA do aluno autenticado, para o favorito.
+     * @return --> Retorna os cards indexados pelo ID do benefício.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, BeneficioSummaryDTO> resumosPorIds(Collection<Long> ids, String ra) {
+        List<Beneficio> beneficios = beneficioRepository.findAllById(ids);
+        Set<Long> favoritos = favoritosDoAluno(ra, beneficios);
+        return beneficios.stream().collect(Collectors.toMap(Beneficio::getId,
+                beneficio -> toDto(beneficio, favoritos.contains(beneficio.getId()))));
+    }
+
     private Set<Long> favoritosDoAluno(String ra, List<Beneficio> beneficios) {
         Long alunoId = alunoRepository.findByUsuario_Ra(ra).map(Aluno::getId).orElse(null);
         if(alunoId == null || beneficios.isEmpty()) return Set.of();

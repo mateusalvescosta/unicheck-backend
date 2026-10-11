@@ -7,6 +7,7 @@ import com.unicheck.manual.dto.ManualResponseDTO;
 import com.unicheck.manual.enumeration.CategoriaManual;
 import com.unicheck.manual.repository.AtalhoManualRepository;
 import com.unicheck.manual.repository.ManualRepository;
+import com.unicheck.notificacao.service.NotificacaoService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(ManualService.class)
+@Import({ManualService.class, NotificacaoService.class})
 @EnabledIf("bancoDisponivel")
 class ManualServiceIntegracaoTest {
     @Autowired ManualService service;

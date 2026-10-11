@@ -20,6 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
+import com.unicheck.notificacao.enumeration.TipoNotificacao;
+import com.unicheck.notificacao.service.NotificacaoService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -49,6 +51,7 @@ import static org.mockito.Mockito.*;
 class ManualServiceTest {
     @Mock private ManualRepository manualRepository;
     @Mock private AtalhoManualRepository atalhoRepository;
+    @Mock private NotificacaoService notificacaoService;
     @InjectMocks private ManualService service;
 
     /**
@@ -143,6 +146,34 @@ class ManualServiceTest {
 
         assertEquals(8, dto.ordem());
         verify(manualRepository, never()).deslocarOrdem(anyInt(), anyInt(), anyInt());
+    }
+
+    /**
+     * @apiNote Manual novo vira notificação para os alunos, com o id já gerado pelo save.
+     */
+    @Test
+    void createNotificaOsAlunosDepoisDeSalvar() {
+        when(manualRepository.maiorOrdem()).thenReturn(7);
+        when(manualRepository.save(any())).thenAnswer(inv -> comId(inv.getArgument(0), 10L));
+
+        service.create(request(null, List.of()));
+
+        verify(notificacaoService).notificarAlunos(TipoNotificacao.MANUAL_NOVO, 10L, "Novo manual: Portal Acadêmico");
+    }
+
+    /**
+     * @apiNote As notificações do manual somem antes dele, para nenhuma levar a algo inexistente.
+     */
+    @Test
+    void deleteRemoveAsNotificacoesAntesDeApagar() {
+        Manual removido = manual(1L, "Portal Acadêmico", 4);
+        when(manualRepository.findById(1L)).thenReturn(Optional.of(removido));
+
+        service.delete(1L);
+
+        var ordem = inOrder(notificacaoService, manualRepository);
+        ordem.verify(notificacaoService).removerDoObjeto(1L, TipoNotificacao.MANUAL_NOVO);
+        ordem.verify(manualRepository).delete(removido);
     }
 
     /**

@@ -1,5 +1,7 @@
 package com.unicheck.checklist.service;
 
+import com.unicheck.notificacao.enumeration.TipoNotificacao;
+import com.unicheck.notificacao.service.NotificacaoService;
 import com.unicheck.checklist.domain.*;
 import com.unicheck.checklist.dto.ChecklistRequestDTO;
 import com.unicheck.checklist.enumeration.StatusChecklist;
@@ -18,6 +20,7 @@ class ChecklistAdminServiceTest {
     @Mock ChecklistRepository checklistRepository; @Mock ItemChecklistRepository itemRepository;
     @Mock ProgressoItemRepository progressoRepository; @Mock ChecklistConcluidoRepository concluidoRepository;
     @Mock ChecklistPrerequisitoRepository prerequisitoRepository;
+    @Mock NotificacaoService notificacaoService;
     @InjectMocks ChecklistAdminService service;
 
     @Test void naoPublicaChecklistVazio() {
@@ -45,6 +48,35 @@ class ChecklistAdminServiceTest {
         when(checklistRepository.bloquearTodos()).thenReturn(List.of(c1, c2));
         when(prerequisitoRepository.findByIdChecklistId(2L)).thenReturn(List.of(new ChecklistPrerequisito(c2, c1)));
         assertThrows(ResourceConflictException.class, () -> service.adicionarPrerequisito(1L, 2L));
+    }
+
+    @Test void primeiraPublicacaoNotificaOsAlunos() {
+        Checklist c = checklist(1L, StatusChecklist.RASCUNHO); when(checklistRepository.bloquearTodos()).thenReturn(List.of(c));
+        when(itemRepository.findByChecklistIdOrderByOrdem(1L)).thenReturn(List.of(item(1L, c, 1)));
+        service.publicar(1L);
+        verify(notificacaoService).notificarAlunos(TipoNotificacao.CHECKLIST_NOVO, 1L, "Novo checklist: Fase");
+    }
+
+    @Test void publicarOQueJaEstaPublicadoNaoNotificaDeNovo() {
+        Checklist c = checklist(1L, StatusChecklist.PUBLICADO); when(checklistRepository.bloquearTodos()).thenReturn(List.of(c));
+        when(itemRepository.findByChecklistIdOrderByOrdem(1L)).thenReturn(List.of(item(1L, c, 1)));
+        service.publicar(1L);
+        verifyNoInteractions(notificacaoService);
+    }
+
+    @Test void publicacaoRejeitadaNaoNotifica() {
+        Checklist c = checklist(1L, StatusChecklist.RASCUNHO); when(checklistRepository.bloquearTodos()).thenReturn(List.of(c));
+        when(itemRepository.findByChecklistIdOrderByOrdem(1L)).thenReturn(List.of());
+        assertThrows(ResourceConflictException.class, () -> service.publicar(1L));
+        verifyNoInteractions(notificacaoService);
+    }
+
+    @Test void excluirRemoveAsNotificacoesDeNovoEParadoAntesDeApagar() {
+        Checklist c = checklist(1L, StatusChecklist.RASCUNHO); when(checklistRepository.bloquearPorId(1L)).thenReturn(Optional.of(c));
+        service.excluir(1L);
+        InOrder ordem = inOrder(notificacaoService, checklistRepository);
+        ordem.verify(notificacaoService).removerDoObjeto(1L, TipoNotificacao.CHECKLIST_NOVO, TipoNotificacao.CHECKLIST_PARADO);
+        ordem.verify(checklistRepository).delete(c);
     }
 
     private Checklist checklist(Long id, StatusChecklist status) { Checklist c = new Checklist(); c.setId(id); c.setNome("Fase"); c.setDescricao("Desc"); c.setOrdem(1); c.setXp(20); c.setHorasComplementares(3); c.setStatus(status); c.setItens(new ArrayList<>()); return c; }
